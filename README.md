@@ -47,3 +47,28 @@ Should you encounter any issues or have questions, feel free to reach out on Dis
 
 *   **Usagi#4255**
 *   **Maajjins**
+
+## ❓ Common Issues & Solutions
+
+Here are some common problems users might encounter and their solutions:
+
+### 1. VPN Client Cannot Connect
+*   **Issue:** Your WireGuard client (phone, laptop) fails to connect to the VPN server.
+*   **Solution:**
+    *   **Firewall:** Ensure your server's firewall (e.g., `ufw`, `firewalld`) allows incoming UDP traffic on the WireGuard port (default `51820`). You might need to open the port: `sudo ufw allow 51820/udp` or `sudo firewall-cmd --add-port=51820/udp --permanent && sudo firewall-cmd --reload`.
+    *   **Public IP:** Verify that the `Endpoint` IP address in your client configuration (`client.conf`) is the correct public IP of your server. If your server's IP changed, update the client configuration.
+    *   **Server Status:** Check if the WireGuard service is running on your server: `sudo systemctl status wg-quick@wg0`.
+
+### 2. No Internet Access After Connecting to VPN
+*   **Issue:** The VPN client connects successfully, but you cannot access the internet.
+*   **Solution:**
+    *   **IP Forwarding:** Ensure IP forwarding is enabled on your server. The script attempts to enable it, but you can verify with `sysctl net.ipv4.ip_forward`. It should return `net.ipv4.ip_forward = 1`. If not, run `echo "net.ipv4.ip_forward=1" | sudo tee -a /etc/sysctl.conf && sudo sysctl -p`.
+    *   **NAT Rules:** Confirm that the `PostUp` and `PostDown` rules in `/etc/wireguard/wg0.conf` are correctly configured for Network Address Translation (NAT). These rules allow traffic from the VPN to exit through your server's public interface.
+    *   **DNS:** Check the DNS server configured in your client.conf. Try using public DNS servers like `8.8.8.8` (Google DNS) or `1.1.1.1` (Cloudflare DNS).
+
+### 3. Script Fails to Install WireGuard
+*   **Issue:** The script encounters an error during the WireGuard installation phase.
+*   **Solution:**
+    *   **Unsupported OS:** While the script supports major distributions, if you are on a less common Linux distribution, manual installation might be required. Refer to the [official WireGuard installation guide](https://www.wireguard.com/install/) for your specific OS.
+    *   **Package Manager Issues:** Ensure your system's package manager (`apt`, `dnf`) is up-to-date and functional. Run `sudo apt update` or `sudo dnf update` before running the script.
+
