@@ -36,3 +36,9 @@ This script automates the installation and configuration of a WireGuard VPN serv
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Contact
+
+For any issues or questions, please contact us on Discord:
+*   **Usagi#4255**
+*   **Maajjins**
