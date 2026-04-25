@@ -66,14 +66,21 @@ wget https://raw.githubusercontent.com/happyhitzz/wireguard-auto-installer/main/
 
 ---
 
-## ☁️ Recommended Hosting
+## ☁️ Recommended Hosting (DDoS Protected)
 
-*   [**OVHcloud**](https://www.ovhcloud.com/) - Global Enterprise Infrastructure.
-*   [**NFOservers**](https://www.nfoservers.com/) - High-Performance Gaming Network.
-*   [**Tempest Hosting**](https://tempest.net/) - Secure & Scalable Solutions.
-*   [**100up.net**](https://100up.net/) - Speed-Focused Hosting.
-*   [**Vultr**](https://www.vultr.com/) - High-Performance Cloud VPS.
-*   [**BuyVM / Frantech**](https://buyvm.net/) - Unmetered Bandwidth & DDoS Protection.
+For the best experience and maximum uptime, we recommend hosting your WireGuard server with providers that offer robust, enterprise-grade DDoS protection.
+
+| Provider | Protection Type | Best For |
+| :--- | :--- | :--- |
+| [**Tempest Hosting**](https://tempest.net/) | **Path.net / Cosmic Guard** | Ultimate DDoS Protection & Low Latency. |
+| [**BuyVM / Frantech**](https://buyvm.net/) | **Stallion / Anycast** | Unmetered Bandwidth & High-Volume Traffic. |
+| [**OVHcloud**](https://www.ovhcloud.com/) | **VAC (Proprietary)** | Global Infrastructure & Enterprise Reliability. |
+| [**NFOservers**](https://www.nfoservers.com/) | **Custom In-House** | Gaming-Grade Network & Low Jitter. |
+| [**Evolution Host**](https://evolution-host.com/) | **EvoShield** | Advanced Layer 3, 4, and 7 Mitigation. |
+| [**Path.net**](https://path.net/) | **Direct Infrastructure** | Direct access to world-class DDoS filtering. |
+| [**100up.net**](https://100up.net/) | **Premium Filtering** | Speed-Focused Hosting with Security. |
+| [**Vultr**](https://www.vultr.com/) | **Cloud Mitigation** | High-Performance Cloud VPS with global reach. |
+| [**Kamatera**](https://www.kamatera.com/) | **Enterprise Cloud** | Scalable resources with built-in security. |
 
 ---
 
