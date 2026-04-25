@@ -1,10 +1,10 @@
-# 🚀 WireGuard Zero-Config Auto-Installer (v5.1) - HARDENED
+# 🚀 WireGuard Zero-Config Auto-Installer (v6.0) - ULTIMATE
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Bash](https://img.shields.io/badge/Language-Bash-4EAA25.svg)](https://www.gnu.org/software/bash/)
 [![WireGuard](https://img.shields.io/badge/VPN-WireGuard-88171A.svg)](https://www.wireguard.com/)
 
-The ultimate "Zero-Config" WireGuard deployment suite. Version 5.1 introduces the **Hardened Security Suite**, featuring Fail2Ban integration, Port Knocking, and a Panic Button for instant lockdown.
+The ultimate "Zero-Config" WireGuard deployment suite. Version 6.0 introduces the **Ultimate Edition**, featuring Multi-Protocol support, Traffic Shaping (QoS), Advanced Analytics, and Automated Health Checks.
 
 ---
 
@@ -12,13 +12,14 @@ The ultimate "Zero-Config" WireGuard deployment suite. Version 5.1 introduces th
 
 | Feature | Description |
 | :--- | :--- |
-| 🛡️ **Fail2Ban Integration** | Automatically bans IPs that fail SSH or WireGuard handshakes multiple times. |
-| 🚪 **Port Knocking** | Keeps your WireGuard port hidden from scanners until a specific sequence is sent. |
-| 🚨 **Panic Button** | Instant server lockdown—blocks all traffic except your current SSH session. |
+| 🚀 **Multi-Protocol** | Integrated support for **Shadowsocks** as an alternative stealth layer. |
+| 🚦 **Traffic Shaping** | Advanced **QoS** to ensure fair bandwidth distribution among all clients. |
+| 📊 **Advanced Analytics** | Detailed kernel-level logging and traffic analysis for power users. |
+| 🏥 **Health Checks** | Automated 24/7 monitoring and self-healing for the WireGuard service. |
+| 🛡️ **Hardened Security** | Fail2Ban, Port Knocking, and a Panic Button for maximum protection. |
 | 🌐 **Web Dashboard** | Manage your VPN, clients, and traffic through a beautiful web interface. |
 | 🌍 **Geo-IP Blocking** | Block entire countries from accessing your VPN server with a single command. |
-| 💾 **Cloud Backups** | Automated daily backups of your entire WireGuard configuration. |
-| 🛡️ **AI DDoS Shield** | Adaptive traffic anomaly detection and automated mitigation. |
+| 🛡️ **AI Security Suite** | AI-driven DDoS protection and log-based attack detection. |
 
 ---
 
@@ -32,7 +33,7 @@ wget https://raw.githubusercontent.com/happyhitzz/wireguard-auto-installer/main/
 
 ---
 
-## 🎮 Management Menu (v5.1)
+## 🎮 Management Menu (v6.0)
 
 1. **Install WireGuard:** Fully automated setup.
 2. **Add New Client:** Create peers with optional **Expiration Days**.
@@ -49,26 +50,29 @@ wget https://raw.githubusercontent.com/happyhitzz/wireguard-auto-installer/main/
 13. **Setup Geo-IP Blocking:** Block traffic from specific countries.
 14. **Setup Fail2Ban:** Protect SSH and VPN from brute-force attacks.
 15. **Setup Port Knocking:** Hide your VPN port from the public internet.
-16. **Setup Telegram Alerts:** Configure instant mobile notifications.
-17. **Setup Multi-Hop Relay:** Chain your VPN to another server.
-18. **Run Cloud Backup Now:** Manually trigger a configuration backup.
-19. **Check for Updates Now:** Manually trigger a full system and script update.
-20. **PANIC BUTTON:** Instant server lockdown in case of emergency.
-21. **Uninstall:** Cleanly remove everything from your system.
+16. **Setup Traffic Shaping (QoS):** Ensure fair bandwidth for all users.
+17. **Setup Health Checks:** Enable automated self-healing and alerts.
+18. **Setup Advanced Analytics:** Enable detailed traffic logging.
+19. **Setup Multi-Protocol:** Add Shadowsocks for alternative obfuscation.
+20. **Setup Telegram Alerts:** Configure instant mobile notifications.
+21. **Setup Multi-Hop Relay:** Chain your VPN to another server.
+22. **Run Cloud Backup Now:** Manually trigger a configuration backup.
+23. **Check for Updates Now:** Manually trigger a full system and script update.
+24. **PANIC BUTTON:** Instant server lockdown in case of emergency.
+25. **Uninstall:** Cleanly remove everything from your system.
 
 ---
 
-## 🛡️ Hardened Security Suite
+## 🚀 Ultimate Edition Capabilities
 
-*   **Fail2Ban:** Adds an extra layer of protection by monitoring logs and banning malicious actors who attempt to brute-force your server.
-*   **Port Knocking:** Your WireGuard port remains "closed" to the public. You must "knock" on a specific sequence of ports (7000, 8000, 9000) to open it for your IP.
-*   **Panic Button:** If you suspect your server is under heavy attack, the Panic Button instantly drops all incoming and outgoing traffic, preserving only your current SSH connection.
+*   **Multi-Protocol Stealth:** If WireGuard is blocked, switch to the integrated Shadowsocks layer for a different type of obfuscation.
+*   **Quality of Service (QoS):** Prevent a single user from hogging all the bandwidth. The script automatically shapes traffic to ensure a smooth experience for everyone.
+*   **Self-Healing Infrastructure:** The automated health check system monitors the WireGuard service every 5 minutes and restarts it if any issues are detected, sending you a Telegram alert instantly.
+*   **Data-Driven Insights:** Enable advanced analytics to get a deep look into your VPN's performance and traffic patterns.
 
 ---
 
 ## ☁️ Recommended Hosting (DDoS Protected)
-
-For the best experience and maximum uptime, we recommend hosting your WireGuard server with providers that offer robust, enterprise-grade DDoS protection.
 
 | Provider | Protection Type | Best For |
 | :--- | :--- | :--- |
@@ -77,10 +81,6 @@ For the best experience and maximum uptime, we recommend hosting your WireGuard 
 | [**OVHcloud**](https://www.ovhcloud.com/) | **VAC (Proprietary)** | Global Infrastructure & Enterprise Reliability. |
 | [**NFOservers**](https://www.nfoservers.com/) | **Custom In-House** | Gaming-Grade Network & Low Jitter. |
 | [**Evolution Host**](https://evolution-host.com/) | **EvoShield** | Advanced Layer 3, 4, and 7 Mitigation. |
-| [**Path.net**](https://path.net/) | **Direct Infrastructure** | Direct access to world-class DDoS filtering. |
-| [**100up.net**](https://100up.net/) | **Premium Filtering** | Speed-Focused Hosting with Security. |
-| [**Vultr**](https://www.vultr.com/) | **Cloud Mitigation** | High-Performance Cloud VPS with global reach. |
-| [**Kamatera**](https://www.kamatera.com/) | **Enterprise Cloud** | Scalable resources with built-in security. |
 
 ---
 

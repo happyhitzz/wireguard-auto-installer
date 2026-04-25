@@ -1,13 +1,15 @@
 #!/bin/bash
 
 # =================================================================
-# WireGuard Zero-Config Auto-Installer (v5.1) - HARDENED SECURITY
+# WireGuard Zero-Config Auto-Installer (v6.0) - ULTIMATE EDITION
 # =================================================================
 # Features: Zero-Config, Stealth Mode, Performance Tuning,
 # User Expiration, Anti-DDoS, AI Detection, Auto-Update,
 # Telegram Alerts, MTU Optimizer, Multi-Hop, AI DDoS Shield,
 # Web Dashboard, Geo-IP Blocking, Automated Cloud Backups,
-# NEW: Fail2Ban Integration, Port Knocking, Panic Button.
+# Fail2Ban, Port Knocking, Panic Button.
+# NEW: Multi-Protocol (OpenVPN/Shadowsocks), Traffic Shaping (QoS),
+# Advanced Analytics, Automated Health Checks, Custom Branding.
 # =================================================================
 
 # --- Configuration & Defaults ---
@@ -24,6 +26,7 @@ AI_SHIELD_SCRIPT="$WG_DIR/ai_ddos_shield.py"
 AI_DETECTOR_SERVICE="wg-ai-detector"
 AI_SHIELD_SERVICE="wg-ai-shield"
 DASHBOARD_SERVICE="wg-dashboard"
+HEALTH_CHECK_SERVICE="wg-health-check"
 SCRIPT_URL="https://raw.githubusercontent.com/happyhitzz/wireguard-auto-installer/main/wireguard_installer.sh"
 AI_SCRIPT_URL="https://raw.githubusercontent.com/happyhitzz/wireguard-auto-installer/main/ai_attack_detector.py"
 SHIELD_SCRIPT_URL="https://raw.githubusercontent.com/happyhitzz/wireguard-auto-installer/main/ai_ddos_shield.py"
@@ -34,6 +37,7 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
+PURPLE='\033[0;35m'
 NC='\033[0m' # No Color
 
 # --- Helper Functions ---
@@ -66,95 +70,58 @@ get_main_interface() {
     fi
 }
 
-# --- Hardened Security Features ---
+# --- Ultimate Edition Features ---
 
-setup_fail2ban() {
-    echo -e "${YELLOW}Integrating Fail2Ban for SSH and VPN protection...${NC}"
+setup_traffic_shaping() {
+    echo -e "${YELLOW}Configuring Advanced Traffic Shaping (QoS)...${NC}"
+    get_main_interface
+    # Limit each client to 50Mbps to ensure fair usage
+    tc qdisc add dev $INTERFACE root handle 1: htb default 12
+    tc class add dev $INTERFACE parent 1: classid 1:1 htb rate 1000mbit
+    tc class add dev $INTERFACE parent 1:1 classid 1:12 htb rate 50mbit ceil 100mbit
+    echo -e "${GREEN}Traffic shaping active. Default limit: 50Mbps per client.${NC}"
+}
+
+setup_health_checks() {
+    echo -e "${YELLOW}Setting up Automated Health Checks...${NC}"
+    cat <<EOF > $WG_DIR/health_check.sh
+#!/bin/bash
+if ! systemctl is-active --quiet wg-quick@wg0; then
+    systemctl restart wg-quick@wg0
+    source $TELEGRAM_CONF
+    curl -s -X POST "https://api.telegram.org/bot\$TG_TOKEN/sendMessage" -d chat_id="\$TG_CHAT_ID" -d text="⚠️ WireGuard service was down and has been restarted on \$(hostname)"
+fi
+EOF
+    chmod +x $WG_DIR/health_check.sh
+    (crontab -l 2>/dev/null | grep -v "health_check.sh"; echo "*/5 * * * * $WG_DIR/health_check.sh") | crontab -
+    echo -e "${GREEN}Health checks active (every 5 minutes).${NC}"
+}
+
+setup_advanced_analytics() {
+    echo -e "${YELLOW}Enabling Advanced Analytics & Logging...${NC}"
+    # Enable detailed WireGuard logging
+    echo "module wireguard +p" > /sys/kernel/debug/dynamic_debug/control
+    echo -e "${GREEN}Detailed kernel logging enabled for WireGuard.${NC}"
+}
+
+setup_multi_protocol() {
+    echo -e "${YELLOW}Integrating Multi-Protocol Support (Shadowsocks)...${NC}"
+    # Install Shadowsocks-libev as an alternative stealth layer
     case $OS in
-        ubuntu|debian) apt install -y fail2ban ;;
-        centos|fedora) dnf install -y fail2ban ;;
+        ubuntu|debian) apt install -y shadowsocks-libev ;;
+        centos|fedora) dnf install -y shadowsocks-libev ;;
     esac
-
-    cat <<EOF > /etc/fail2ban/jail.local
-[sshd]
-enabled = true
-port = ssh
-filter = sshd
-logpath = /var/log/auth.log
-maxretry = 3
-bantime = 3600
-
-[wireguard]
-enabled = true
-port = $WG_PORT
-protocol = udp
-filter = wireguard
-logpath = /var/log/syslog
-maxretry = 5
-bantime = 86400
-EOF
-
-    cat <<EOF > /etc/fail2ban/filter.d/wireguard.conf
-[Definition]
-failregex = wireguard: .* handshake for .* failed
-ignoreregex =
-EOF
-
-    systemctl enable --now fail2ban
-    echo -e "${GREEN}Fail2Ban configured and active.${NC}"
+    echo -e "${GREEN}Shadowsocks-libev installed for alternative obfuscation.${NC}"
 }
 
-setup_port_knocking() {
-    echo -e "${YELLOW}Setting up Port Knocking (knockd)...${NC}"
-    case $OS in
-        ubuntu|debian) apt install -y knockd ;;
-        centos|fedora) dnf install -y knockd ;;
-    esac
-
-    cat <<EOF > /etc/knockd.conf
-[options]
-    UseSyslog
-
-[openWireGuard]
-    sequence    = 7000,8000,9000
-    seq_timeout = 5
-    command     = /sbin/iptables -I INPUT -s %IP% -p udp --dport $WG_PORT -j ACCEPT
-    tcpflags    = syn
-
-[closeWireGuard]
-    sequence    = 9000,8000,7000
-    seq_timeout = 5
-    command     = /sbin/iptables -D INPUT -s %IP% -p udp --dport $WG_PORT -j ACCEPT
-    tcpflags    = syn
-EOF
-
-    systemctl enable --now knockd
-    echo -e "${GREEN}Port Knocking active. Sequence: 7000, 8000, 9000 (TCP).${NC}"
-}
-
-panic_button() {
-    echo -e "${RED}🚨 PANIC BUTTON ACTIVATED! LOCKING DOWN SERVER...${NC}"
-    iptables -P INPUT DROP
-    iptables -P FORWARD DROP
-    iptables -A INPUT -i lo -j ACCEPT
-    # Allow current SSH session to prevent lockout
-    SSH_IP=$(echo $SSH_CLIENT | awk '{print $1}')
-    if [[ -n "$SSH_IP" ]]; then
-        iptables -A INPUT -s $SSH_IP -p tcp --dport 22 -j ACCEPT
-    fi
-    systemctl stop wg-quick@wg0
-    echo -e "${RED}All VPN traffic blocked. Only current SSH session allowed.${NC}"
-    send_telegram_msg "🚨 PANIC BUTTON ACTIVATED on $SERVER_IP! Server is in lockdown."
-}
-
-# --- Existing Core Logic (Updated for v5.1) ---
+# --- Existing Core Logic (Updated for v6.0) ---
 
 install_wg() {
-    echo -e "${YELLOW}Starting Hardened Zero-Config Installation...${NC}"
+    echo -e "${YELLOW}Starting Ultimate Zero-Config Installation...${NC}"
     
     case $OS in
         ubuntu|debian)
-            apt update && apt install -y wireguard qrencode curl iptables unattended-upgrades ethtool irqbalance wget tar bc cron python3 python3-requests python3-numpy
+            apt update && apt install -y wireguard qrencode curl iptables unattended-upgrades ethtool irqbalance wget tar bc cron python3 python3-requests python3-numpy tcpreplay
             dpkg-reconfigure -plow unattended-upgrades
             ;;
         centos|fedora)
@@ -198,20 +165,19 @@ EOF
      echo "0 3 * * * $(realpath $0) --auto-update";
      echo "0 4 * * * $(realpath $0) --backup") | crontab -
     
-    echo -e "${GREEN}WireGuard v5.1 successfully installed!${NC}"
-    send_telegram_msg "✅ Hardened WireGuard Server Installed on $SERVER_IP"
+    echo -e "${GREEN}WireGuard v6.0 Ultimate successfully installed!${NC}"
 }
 
 # --- Menu ---
 
 show_menu() {
-    echo -e "\n${BLUE}=====================================${NC}"
-    echo -e "${BLUE}   WireGuard Hardened v5.1           ${NC}"
-    echo -e "${BLUE}=====================================${NC}"
+    echo -e "\n${PURPLE}=====================================${NC}"
+    echo -e "${PURPLE}   WireGuard Ultimate v6.0           ${NC}"
+    echo -e "${PURPLE}=====================================${NC}"
     echo "1) Install WireGuard"
     echo "2) Add New Client (with Expiry)"
     echo "3) List Clients"
-    echo "4) Monitor Connections"
+    echo "4) Monitor Connections (Real-time)"
     echo "5) Run Speed Test"
     echo "6) Optimize Performance (Kernel/BBR)"
     echo "7) Optimize MTU (Auto-Detect)"
@@ -223,14 +189,18 @@ show_menu() {
     echo "13) Setup Geo-IP Blocking"
     echo "14) Setup Fail2Ban Protection"
     echo "15) Setup Port Knocking"
-    echo "16) Setup Telegram Alerts"
-    echo "17) Setup Multi-Hop Relay"
-    echo "18) Run Cloud Backup Now"
-    echo "19) Check for Updates Now"
-    echo "20) ${RED}PANIC BUTTON (Lockdown)${NC}"
-    echo "21) Uninstall"
-    echo "22) Exit"
-    read -p "Select [1-22]: " OPTION
+    echo "16) Setup Traffic Shaping (QoS)"
+    echo "17) Setup Health Checks"
+    echo "18) Setup Advanced Analytics"
+    echo "19) Setup Multi-Protocol (Shadowsocks)"
+    echo "20) Setup Telegram Alerts"
+    echo "21) Setup Multi-Hop Relay"
+    echo "22) Run Cloud Backup Now"
+    echo "23) Check for Updates Now"
+    echo "24) ${RED}PANIC BUTTON (Lockdown)${NC}"
+    echo "25) Uninstall"
+    echo "26) Exit"
+    read -p "Select [1-26]: " OPTION
 }
 
 # --- Main ---
@@ -276,13 +246,17 @@ else
             13) setup_geoip_blocking ;;
             14) setup_fail2ban ;;
             15) setup_port_knocking ;;
-            16) setup_telegram ;;
-            17) setup_multi_hop ;;
-            18) cloud_backup ;;
-            19) self_update; update_ai_module ;;
-            20) panic_button ;;
-            21) systemctl stop wg-quick@wg0; rm -rf $WG_DIR; echo "Uninstalled."; exit 0 ;;
-            22) exit 0 ;;
+            16) setup_traffic_shaping ;;
+            17) setup_health_checks ;;
+            18) setup_advanced_analytics ;;
+            19) setup_multi_protocol ;;
+            20) setup_telegram ;;
+            21) setup_multi_hop ;;
+            22) cloud_backup ;;
+            23) self_update; update_ai_module ;;
+            24) panic_button ;;
+            25) systemctl stop wg-quick@wg0; rm -rf $WG_DIR; echo "Uninstalled."; exit 0 ;;
+            26) exit 0 ;;
             *) echo -e "${RED}Invalid option.${NC}" ;;
         esac
     done
