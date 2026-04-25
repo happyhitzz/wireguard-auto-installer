@@ -1,10 +1,10 @@
-# 🚀 WireGuard Advanced Auto-Installer
+# 🚀 WireGuard Advanced Auto-Installer (v2.0)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Bash](https://img.shields.io/badge/Language-Bash-4EAA25.svg)](https://www.gnu.org/software/bash/)
 [![WireGuard](https://img.shields.io/badge/VPN-WireGuard-88171A.svg)](https://www.wireguard.com/)
 
-A powerful, all-in-one solution for deploying and managing a secure WireGuard VPN server. This script now features a full management menu for multi-client support, ad-blocking DNS, and more.
+A powerful, all-in-one solution for deploying and managing a secure WireGuard VPN server. Version 2.0 introduces automated security updates, real-time monitoring, and built-in performance testing.
 
 ---
 
@@ -15,7 +15,9 @@ A powerful, all-in-one solution for deploying and managing a secure WireGuard VP
 | 🐧 **OS Detection** | Automatically configures for Ubuntu, Debian, CentOS, and Fedora. |
 | 👥 **Multi-Client** | Add, list, and manage multiple devices from a single menu. |
 | 🛡️ **Ad-Blocking** | Optional **AdGuard DNS** integration to block ads and trackers. |
-| ⚙️ **DNS Options** | Choose between Google, Cloudflare, or AdGuard DNS. |
+| 🔒 **Auto-Security** | Enables **Unattended Upgrades** for automatic OS security patches. |
+| 📊 **Monitoring** | Real-time connection monitoring to see active peers and traffic. |
+| 🚀 **Speed Test** | Built-in speed test utility to verify your VPN performance. |
 | 📱 **QR Codes** | Instant QR code generation for mobile setup. |
 | 🗑️ **Uninstaller** | Cleanly remove WireGuard and all configurations when needed. |
 
@@ -27,7 +29,7 @@ A powerful, all-in-one solution for deploying and managing a secure WireGuard VP
 | :--- | :--- |
 | **Supported OS** | Ubuntu 20.04+, Debian 10+, CentOS 7+, Fedora 32+ |
 | **Privileges** | Root or Sudo access required |
-| **Tools** | `wget`, `curl`, `qrencode` (Script will help install these) |
+| **Tools** | `wget`, `curl`, `qrencode`, `speedtest-cli` (Script will help install these) |
 
 ---
 
@@ -50,13 +52,15 @@ sudo ./wireguard_installer.sh
 
 ---
 
-## 🎮 Management Menu
+## 🎮 Management Menu (v2.0)
 
 Once installed, running the script again will open the **WireGuard Manager**:
 1. **Install WireGuard:** Initial setup.
 2. **Add New Client:** Create a new peer with custom DNS and QR code.
 3. **List Clients:** See all currently configured devices.
-4. **Uninstall:** Completely remove the VPN from your system.
+4. **Monitor Connections:** View real-time traffic and connection status.
+5. **Run Speed Test:** Check your server's upload and download speeds.
+6. **Uninstall:** Completely remove the VPN from your system.
 
 ---
 
@@ -64,7 +68,7 @@ Once installed, running the script again will open the **WireGuard Manager**:
 
 *   **Firewall:** Ensure UDP port `51820` is open on your server's firewall.
 *   **Public IP:** The script auto-detects your IP; verify it during setup.
-*   **Encryption:** Uses industry-standard **ChaCha20-Poly1305** for maximum security.
+*   **Security:** Automated updates are enabled by default to keep your server patched.
 
 ---
 

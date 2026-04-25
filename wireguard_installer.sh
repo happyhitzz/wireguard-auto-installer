@@ -1,13 +1,16 @@
 #!/bin/bash
 
 # =================================================================
-# WireGuard Advanced Auto-Installer
+# WireGuard Advanced Auto-Installer (v2.0)
 # =================================================================
 # Features:
 # - OS Detection (Ubuntu, Debian, CentOS, Fedora)
 # - Multi-Client Management (Add/Remove/List)
 # - Custom DNS Options (Google, Cloudflare, AdGuard)
 # - Automatic Firewall Configuration
+# - Automated Security Updates (Unattended Upgrades)
+# - Real-time Connection Monitoring
+# - Built-in Speed Test
 # - Uninstaller
 # =================================================================
 
@@ -18,10 +21,10 @@ WG_PORT="51820"
 WG_PROTO="udp"
 
 # --- Colors for Output ---
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+RED=\'\033[0;31m\'
+GREEN=\'\033[0;32m\'
+YELLOW=\'\033[1;33m\'
+NC=\'\033[0m\' # No Color
 
 # --- Helper Functions ---
 
@@ -49,14 +52,19 @@ get_public_ip() {
 # --- Core Logic ---
 
 install_wg() {
-    echo -e "${YELLOW}Installing WireGuard...${NC}"
+    echo -e "${YELLOW}Installing WireGuard and essential tools...${NC}"
     case $OS in
         ubuntu|debian)
-            apt update && apt install -y wireguard qrencode curl iptables
+            apt update && apt install -y wireguard qrencode curl iptables unattended-upgrades
+            # Enable unattended upgrades for security
+            dpkg-reconfigure -plow unattended-upgrades
             ;;
         centos|fedora)
             dnf install -y epel-release
-            dnf install -y wireguard-tools qrencode curl iptables
+            dnf install -y wireguard-tools qrencode curl iptables dnf-automatic
+            # Enable automatic security updates
+            sed -i \'s/upgrade_type = default/upgrade_type = security/\' /etc/dnf/automatic.conf
+            systemctl enable --now dnf-automatic.timer
             ;;
     esac
     
@@ -94,7 +102,7 @@ add_client() {
     read -p "Enter client name (e.g., phone): " CLIENT_NAME
     
     # Find next available IP
-    LAST_IP=$(grep "AllowedIPs" $WG_CONF | tail -n1 | awk '{print $3}' | cut -d. -f4 | cut -d/ -f1)
+    LAST_IP=$(grep "AllowedIPs" $WG_CONF | tail -n1 | awk \'{print $3}\' | cut -d. -f4 | cut -d/ -f1)
     if [ -z "$LAST_IP" ]; then
         CLIENT_IP="2"
     else
@@ -145,7 +153,7 @@ AllowedIPs = 0.0.0.0/0
 PersistentKeepalive = 25
 EOF
 
-    echo -e "${GREEN}Client '$CLIENT_NAME' added!${NC}"
+    echo -e "${GREEN}Client 	'$CLIENT_NAME	' added!${NC}"
     echo -e "Config saved to: $CLIENT_CONF_FILE"
     echo -e "${YELLOW}QR Code for mobile setup:${NC}"
     qrencode -t ansiutf8 < "$CLIENT_CONF_FILE"
@@ -154,6 +162,23 @@ EOF
 list_clients() {
     echo -e "${YELLOW}Current Clients:${NC}"
     grep "# Client:" $WG_CONF | cut -d: -f2
+}
+
+monitor_connections() {
+    echo -e "${YELLOW}Real-time Connection Monitoring (Ctrl+C to exit):${NC}"
+    watch -n 1 wg show
+}
+
+run_speedtest() {
+    echo -e "${YELLOW}Running Speed Test...${NC}"
+    if ! command -v speedtest-cli &> /dev/null; then
+        echo -e "${YELLOW}Installing speedtest-cli...${NC}"
+        case $OS in
+            ubuntu|debian) apt install -y speedtest-cli ;;
+            centos|fedora) dnf install -y speedtest-cli ;;
+        esac
+    fi
+    speedtest-cli
 }
 
 uninstall_wg() {
@@ -170,13 +195,15 @@ uninstall_wg() {
 # --- Menu ---
 
 show_menu() {
-    echo -e "\n${GREEN}--- WireGuard Manager ---${NC}"
+    echo -e "\n${GREEN}--- WireGuard Manager (v2.0) ---${NC}"
     echo "1) Install WireGuard"
     echo "2) Add New Client"
     echo "3) List Clients"
-    echo "4) Uninstall WireGuard"
-    echo "5) Exit"
-    read -p "Select an option [1-5]: " OPTION
+    echo "4) Monitor Connections"
+    echo "5) Run Speed Test"
+    echo "6) Uninstall WireGuard"
+    echo "7) Exit"
+    read -p "Select an option [1-7]: " OPTION
 }
 
 # --- Main ---
@@ -193,8 +220,10 @@ else
             1) echo -e "${YELLOW}Already installed.${NC}" ;;
             2) add_client ;;
             3) list_clients ;;
-            4) uninstall_wg; exit 0 ;;
-            5) exit 0 ;;
+            4) monitor_connections ;;
+            5) run_speedtest ;;
+            6) uninstall_wg; exit 0 ;;
+            7) exit 0 ;;
             *) echo -e "${RED}Invalid option.${NC}" ;;
         esac
     done
