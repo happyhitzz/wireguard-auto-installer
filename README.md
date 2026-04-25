@@ -1,10 +1,10 @@
-# 🚀 WireGuard Zero-Config Auto-Installer (v4.0)
+# 🚀 WireGuard Zero-Config Auto-Installer (v4.1)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Bash](https://img.shields.io/badge/Language-Bash-4EAA25.svg)](https://www.gnu.org/software/bash/)
 [![WireGuard](https://img.shields.io/badge/VPN-WireGuard-88171A.svg)](https://www.wireguard.com/)
 
-The ultimate "Zero-Config" WireGuard deployment suite. Version 4.0 introduces the **Power User Suite**, featuring Telegram alerts, automated MTU optimization, and multi-hop relay support.
+The ultimate "Zero-Config" WireGuard deployment suite. Version 4.1 introduces the **AI DDoS Shield**, an adaptive traffic monitoring system that automatically detects and mitigates network-level attacks.
 
 ---
 
@@ -12,11 +12,11 @@ The ultimate "Zero-Config" WireGuard deployment suite. Version 4.0 introduces th
 
 | Feature | Description |
 | :--- | :--- |
-| 📢 **Telegram Alerts** | Get instant notifications on your phone for new clients, expirations, and updates. |
+| 🛡️ **AI DDoS Shield** | Adaptive traffic anomaly detection that automatically bans malicious IPs in real-time. |
+| 🤖 **AI Attack Detector** | Real-time log analysis to detect and alert on brute-force and handshake attacks. |
+| 📢 **Telegram Alerts** | Get instant notifications on your phone for new clients, expirations, and security events. |
 | ⚡ **MTU Optimizer** | Automatically detects and applies the best MTU for your network to prevent fragmentation. |
-| 🔗 **Multi-Hop Relay** | Easily configure your server to relay traffic to another WireGuard node. |
-| 🔄 **Full Auto-Update** | Automatically keeps the script, AI module, and system dependencies updated. |
-| 🤖 **AI Attack Detection** | Optional real-time log analysis to detect and alert on brute-force and handshake attacks. |
+| 🔄 **Full Auto-Update** | Automatically keeps the script, AI modules, and system dependencies updated. |
 | 🛡️ **Anti-DDoS** | One-click **Blackhole Toggle** to drop malicious traffic and harden the network stack. |
 | ⏳ **User Expiration** | Set access duration in days; users are automatically blocked upon expiry. |
 
@@ -32,7 +32,7 @@ wget https://raw.githubusercontent.com/happyhitzz/wireguard-auto-installer/main/
 
 ---
 
-## 🎮 Management Menu (v4.0)
+## 🎮 Management Menu (v4.1)
 
 1. **Install WireGuard:** Fully automated setup.
 2. **Add New Client:** Create peers with optional **Expiration Days**.
@@ -43,19 +43,20 @@ wget https://raw.githubusercontent.com/happyhitzz/wireguard-auto-installer/main/
 7. **Optimize MTU:** Auto-detect the best MTU for your connection.
 8. **Toggle Stealth Mode:** Bypass DPI and firewalls with one click.
 9. **Toggle Anti-DDoS Blackhole:** Harden server against DDoS attacks.
-10. **Toggle AI Attack Detector:** Enable/Disable optional AI-driven security monitoring.
-11. **Setup Telegram Alerts:** Configure instant mobile notifications.
-12. **Setup Multi-Hop Relay:** Chain your VPN to another server.
-13. **Check for Updates Now:** Manually trigger a full system and script update.
-14. **Uninstall:** Cleanly remove everything from your system.
+10. **Toggle AI Attack Detector:** Enable/Disable log-based security monitoring.
+11. **Toggle AI DDoS Shield:** Enable/Disable traffic-based anomaly protection.
+12. **Setup Telegram Alerts:** Configure instant mobile notifications.
+13. **Setup Multi-Hop Relay:** Chain your VPN to another server.
+14. **Check for Updates Now:** Manually trigger a full system and script update.
+15. **Uninstall:** Cleanly remove everything from your system.
 
 ---
 
-## 📢 Power User Features
+## 🛡️ AI Security Suite
 
-*   **Telegram Integration:** Stay informed anywhere. The script sends alerts for installation success, new client creation, and automated user blocking.
-*   **MTU Auto-Detection:** No more manual MTU guessing. The script tests your network path to find the largest non-fragmented packet size.
-*   **Multi-Hop Support:** Perfect for advanced privacy setups where you want to route your traffic through multiple VPN servers.
+*   **AI DDoS Shield:** Uses Z-score anomaly detection to monitor active connections. If an IP behaves abnormally (e.g., high connection volume), it is automatically blacklisted via `iptables` for 1 hour.
+*   **AI Attack Detector:** Watches system logs for brute-force patterns and failed WireGuard handshakes, sending rich alerts to Discord or Telegram.
+*   **Adaptive Protection:** Both systems are optional and can be toggled independently based on your server's threat level.
 
 ---
 

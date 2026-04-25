@@ -1,11 +1,11 @@
 #!/bin/bash
 
 # =================================================================
-# WireGuard Zero-Config Auto-Installer (v4.0)
+# WireGuard Zero-Config Auto-Installer (v4.1)
 # =================================================================
 # Features: Zero-Config, Stealth Mode, Performance Tuning,
 # User Expiration, Anti-DDoS, AI Detection, Auto-Update,
-# and NEW: Telegram Alerts, MTU Optimizer, Multi-Hop Relay.
+# Telegram Alerts, MTU Optimizer, Multi-Hop, and NEW: AI DDoS Shield.
 # =================================================================
 
 # --- Configuration & Defaults ---
@@ -18,9 +18,12 @@ STEALTH_PASS="mypassword123"
 EXPIRY_LOG="$WG_DIR/expiry.log"
 BLACKHOLE_CONF="/etc/sysctl.d/99-anti-ddos.conf"
 AI_DETECTOR_SCRIPT="$WG_DIR/ai_attack_detector.py"
-AI_SERVICE_NAME="wg-ai-detector"
+AI_SHIELD_SCRIPT="$WG_DIR/ai_ddos_shield.py"
+AI_DETECTOR_SERVICE="wg-ai-detector"
+AI_SHIELD_SERVICE="wg-ai-shield"
 SCRIPT_URL="https://raw.githubusercontent.com/happyhitzz/wireguard-auto-installer/main/wireguard_installer.sh"
 AI_SCRIPT_URL="https://raw.githubusercontent.com/happyhitzz/wireguard-auto-installer/main/ai_attack_detector.py"
+SHIELD_SCRIPT_URL="https://raw.githubusercontent.com/happyhitzz/wireguard-auto-installer/main/ai_ddos_shield.py"
 TELEGRAM_CONF="$WG_DIR/telegram.conf"
 
 # --- Colors for Output ---
@@ -87,7 +90,6 @@ setup_telegram() {
 
 optimize_mtu() {
     echo -e "${YELLOW}Optimizing MTU for best performance...${NC}"
-    # Test MTU starting from 1500 down to 1280
     for mtu in 1500 1420 1380 1280; do
         if ping -c 1 -M do -s $((mtu - 28)) 8.8.8.8 &> /dev/null; then
             BEST_MTU=$mtu
@@ -142,16 +144,16 @@ self_update() {
 }
 
 update_ai_module() {
-    if [[ -f $AI_DETECTOR_SCRIPT ]]; then
-        echo -e "${YELLOW}Updating AI Security Module...${NC}"
-        if wget -q $AI_SCRIPT_URL -O "$AI_DETECTOR_SCRIPT.tmp"; then
-            mv "$AI_DETECTOR_SCRIPT.tmp" "$AI_DETECTOR_SCRIPT"
-            if systemctl is-active --quiet $AI_SERVICE_NAME; then
-                systemctl restart $AI_SERVICE_NAME
-            fi
-            echo -e "${GREEN}AI Module updated.${NC}"
+    for script in "$AI_DETECTOR_SCRIPT:$AI_SCRIPT_URL" "$AI_SHIELD_SCRIPT:$SHIELD_SCRIPT_URL"; do
+        path="${script%%:*}"
+        url="${script#*:}"
+        if [[ -f $path ]]; then
+            echo -e "${YELLOW}Updating $(basename $path)...${NC}"
+            wget -q "$url" -O "$path.tmp" && mv "$path.tmp" "$path"
         fi
-    fi
+    done
+    systemctl is-active --quiet $AI_DETECTOR_SERVICE && systemctl restart $AI_DETECTOR_SERVICE
+    systemctl is-active --quiet $AI_SHIELD_SERVICE && systemctl restart $AI_SHIELD_SERVICE
 }
 
 # --- Core Logic ---
@@ -161,12 +163,12 @@ install_wg() {
     
     case $OS in
         ubuntu|debian)
-            apt update && apt install -y wireguard qrencode curl iptables unattended-upgrades ethtool irqbalance wget tar bc cron python3 python3-requests
+            apt update && apt install -y wireguard qrencode curl iptables unattended-upgrades ethtool irqbalance wget tar bc cron python3 python3-requests python3-numpy
             dpkg-reconfigure -plow unattended-upgrades
             ;;
         centos|fedora)
             dnf install -y epel-release
-            dnf install -y wireguard-tools qrencode curl iptables dnf-automatic ethtool irqbalance wget tar bc cronie python3 python3-requests
+            dnf install -y wireguard-tools qrencode curl iptables dnf-automatic ethtool irqbalance wget tar bc cronie python3 python3-requests python3-numpy
             sed -i 's/upgrade_type = default/upgrade_type = security/' /etc/dnf/automatic.conf
             systemctl enable --now dnf-automatic.timer
             ;;
@@ -349,9 +351,9 @@ EOF
 }
 
 toggle_ai_detector() {
-    if systemctl is-active --quiet $AI_SERVICE_NAME; then
-        systemctl stop $AI_SERVICE_NAME
-        systemctl disable $AI_SERVICE_NAME
+    if systemctl is-active --quiet $AI_DETECTOR_SERVICE; then
+        systemctl stop $AI_DETECTOR_SERVICE
+        systemctl disable $AI_DETECTOR_SERVICE
         echo -e "${RED}AI Attack Detector Disabled.${NC}"
     else
         echo -e "${YELLOW}Enabling AI Attack Detector...${NC}"
@@ -362,7 +364,7 @@ toggle_ai_detector() {
         if [[ -n "$WEBHOOK" ]]; then
             sed -i "s|DISCORD_WEBHOOK = .*|DISCORD_WEBHOOK = \"$WEBHOOK\"|" $AI_DETECTOR_SCRIPT
         fi
-        cat <<EOF > /etc/systemd/system/$AI_SERVICE_NAME.service
+        cat <<EOF > /etc/systemd/system/$AI_DETECTOR_SERVICE.service
 [Unit]
 Description=WireGuard AI Attack Detector
 After=network.target
@@ -376,8 +378,37 @@ Restart=always
 WantedBy=multi-user.target
 EOF
         systemctl daemon-reload
-        systemctl enable --now $AI_SERVICE_NAME
+        systemctl enable --now $AI_DETECTOR_SERVICE
         echo -e "${GREEN}AI Attack Detector Enabled and Running.${NC}"
+    fi
+}
+
+toggle_ai_shield() {
+    if systemctl is-active --quiet $AI_SHIELD_SERVICE; then
+        systemctl stop $AI_SHIELD_SERVICE
+        systemctl disable $AI_SHIELD_SERVICE
+        echo -e "${RED}AI DDoS Shield Disabled.${NC}"
+    else
+        echo -e "${YELLOW}Enabling AI DDoS Shield...${NC}"
+        if [[ ! -f $AI_SHIELD_SCRIPT ]]; then
+            wget -q $SHIELD_SCRIPT_URL -O $AI_SHIELD_SCRIPT
+        fi
+        cat <<EOF > /etc/systemd/system/$AI_SHIELD_SERVICE.service
+[Unit]
+Description=WireGuard AI DDoS Shield
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 $AI_SHIELD_SCRIPT
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+EOF
+        systemctl daemon-reload
+        systemctl enable --now $AI_SHIELD_SERVICE
+        echo -e "${GREEN}AI DDoS Shield Enabled and Running.${NC}"
     fi
 }
 
@@ -385,7 +416,7 @@ EOF
 
 show_menu() {
     echo -e "\n${BLUE}=====================================${NC}"
-    echo -e "${BLUE}   WireGuard Power User v4.0         ${NC}"
+    echo -e "${BLUE}   WireGuard AI-Shield v4.1          ${NC}"
     echo -e "${BLUE}=====================================${NC}"
     echo "1) Install WireGuard"
     echo "2) Add New Client (with Expiry)"
@@ -396,13 +427,14 @@ show_menu() {
     echo "7) Optimize MTU (Auto-Detect)"
     echo "8) Toggle Stealth Mode (udp2raw)"
     echo "9) Toggle Anti-DDoS Blackhole"
-    echo "10) Toggle AI Attack Detector"
-    echo "11) Setup Telegram Alerts"
-    echo "12) Setup Multi-Hop Relay"
-    echo "13) Check for Updates Now"
-    echo "14) Uninstall"
-    echo "15) Exit"
-    read -p "Select [1-15]: " OPTION
+    echo "10) Toggle AI Attack Detector (Logs)"
+    echo "11) Toggle AI DDoS Shield (Traffic)"
+    echo "12) Setup Telegram Alerts"
+    echo "13) Setup Multi-Hop Relay"
+    echo "14) Check for Updates Now"
+    echo "15) Uninstall"
+    echo "16) Exit"
+    read -p "Select [1-16]: " OPTION
 }
 
 # --- Main ---
@@ -438,11 +470,12 @@ else
             8) setup_stealth_mode ;;
             9) toggle_anti_ddos ;;
             10) toggle_ai_detector ;;
-            11) setup_telegram ;;
-            12) setup_multi_hop ;;
-            13) self_update; update_ai_module ;;
-            14) systemctl stop wg-quick@wg0; systemctl stop $AI_SERVICE_NAME &> /dev/null; rm -rf $WG_DIR; crontab -l | grep -v "wireguard_installer.sh" | crontab -; echo "Uninstalled."; exit 0 ;;
-            15) exit 0 ;;
+            11) toggle_ai_shield ;;
+            12) setup_telegram ;;
+            13) setup_multi_hop ;;
+            14) self_update; update_ai_module ;;
+            15) systemctl stop wg-quick@wg0; systemctl stop $AI_DETECTOR_SERVICE &> /dev/null; systemctl stop $AI_SHIELD_SERVICE &> /dev/null; rm -rf $WG_DIR; crontab -l | grep -v "wireguard_installer.sh" | crontab -; echo "Uninstalled."; exit 0 ;;
+            16) exit 0 ;;
             *) echo -e "${RED}Invalid option.${NC}" ;;
         esac
     done
