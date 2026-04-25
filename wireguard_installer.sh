@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # =================================================================
-# WireGuard Zero-Config Auto-Installer (v3.2)
+# WireGuard Zero-Config Auto-Installer (v3.3)
 # =================================================================
 # Features: Zero-Config, Stealth Mode, Performance Tuning,
-# and NEW: User Expiration (Time-Limited Access).
+# User Expiration, and NEW: Anti-DDoS Blackhole Toggle.
 # =================================================================
 
 # --- Configuration & Defaults ---
@@ -15,6 +15,7 @@ WG_PROTO="udp"
 STEALTH_PORT="443"
 STEALTH_PASS="mypassword123"
 EXPIRY_LOG="$WG_DIR/expiry.log"
+BLACKHOLE_CONF="/etc/sysctl.d/99-anti-ddos.conf"
 
 # --- Colors for Output ---
 RED='\033[0;31m'
@@ -98,7 +99,6 @@ EOF
     systemctl enable wg-quick@wg0
     systemctl start wg-quick@wg0
     
-    # Setup Cron Job for Expiry Check (every hour)
     (crontab -l 2>/dev/null | grep -v "wireguard_installer.sh --check-expiry"; echo "0 * * * * $(realpath $0) --check-expiry") | crontab -
     
     echo -e "${GREEN}WireGuard successfully installed!${NC}"
@@ -129,7 +129,6 @@ add_client() {
         *) DNS="8.8.8.8" ;;
     esac
 
-    # Add to Server Config
     cat <<EOF >> $WG_CONF
 
 [Peer]
@@ -140,14 +139,12 @@ EOF
 
     wg addconf wg0 <(echo -e "[Peer]\nPublicKey = $CLIENT_PUB\nAllowedIPs = 10.0.0.$CLIENT_IP/32")
 
-    # Log Expiry
     if [[ $EXPIRY_DAYS -gt 0 ]]; then
         EXPIRY_DATE=$(date -d "+$EXPIRY_DAYS days" +%s)
         echo "$CLIENT_NAME:$CLIENT_PUB:$EXPIRY_DATE" >> $EXPIRY_LOG
         echo -e "${YELLOW}Client will expire on $(date -d @$EXPIRY_DATE).${NC}"
     fi
 
-    # Generate Client Config
     get_public_ip
     SERVER_PUB=$(cat "$WG_DIR/server_public.key")
     
@@ -178,9 +175,7 @@ check_expiry() {
     while IFS=: read -r NAME PUB EXPIRY; do
         if [[ $CURRENT_TIME -ge $EXPIRY ]]; then
             echo -e "${RED}Expiring client: $NAME${NC}"
-            # Remove from running config
             wg set wg0 peer "$PUB" remove
-            # Mark as expired in config file (comment out)
             sed -i "/PublicKey = $PUB/,/AllowedIPs/ s/^/#EXPIRED# /" $WG_CONF
             RELOAD_NEEDED=true
         else
@@ -225,11 +220,39 @@ setup_stealth_mode() {
     fi
 }
 
+toggle_anti_ddos() {
+    if [[ -f $BLACKHOLE_CONF ]]; then
+        rm $BLACKHOLE_CONF
+        sysctl --system &> /dev/null
+        echo -e "${RED}Anti-DDoS Blackhole Disabled.${NC}"
+    else
+        echo -e "${YELLOW}Enabling Anti-DDoS Blackhole Protection...${NC}"
+        cat <<EOF > $BLACKHOLE_CONF
+# Drop ICMP echo requests (Ping)
+net.ipv4.icmp_echo_ignore_all = 1
+# Enable TCP SYN Cookie Protection
+net.ipv4.tcp_syncookies = 1
+# Increase SYN backlog
+net.ipv4.tcp_max_syn_backlog = 2048
+# Enable Source Address Verification (Spoofing protection)
+net.ipv4.conf.all.rp_filter = 1
+net.ipv4.conf.default.rp_filter = 1
+# Drop redirects
+net.ipv4.conf.all.accept_redirects = 0
+net.ipv4.conf.default.accept_redirects = 0
+# Ignore bogus error responses
+net.ipv4.icmp_ignore_bogus_error_responses = 1
+EOF
+        sysctl -p $BLACKHOLE_CONF &> /dev/null
+        echo -e "${GREEN}Anti-DDoS Blackhole Enabled.${NC}"
+    fi
+}
+
 # --- Menu ---
 
 show_menu() {
     echo -e "\n${BLUE}=====================================${NC}"
-    echo -e "${BLUE}   WireGuard Time-Limited v3.2       ${NC}"
+    echo -e "${BLUE}   WireGuard Anti-DDoS v3.3          ${NC}"
     echo -e "${BLUE}=====================================${NC}"
     echo "1) Install WireGuard"
     echo "2) Add New Client (with Expiry)"
@@ -238,10 +261,11 @@ show_menu() {
     echo "5) Run Speed Test"
     echo "6) Optimize Performance"
     echo "7) Toggle Stealth Mode"
-    echo "8) Check/Force Expiry Now"
-    echo "9) Uninstall"
-    echo "10) Exit"
-    read -p "Select [1-10]: " OPTION
+    echo "8) Toggle Anti-DDoS Blackhole"
+    echo "9) Check/Force Expiry Now"
+    echo "10) Uninstall"
+    echo "11) Exit"
+    read -p "Select [1-11]: " OPTION
 }
 
 # --- Main ---
@@ -267,9 +291,10 @@ else
             5) command -v speedtest-cli &> /dev/null || apt install -y speedtest-cli || dnf install -y speedtest-cli; speedtest-cli ;;
             6) apply_performance_tuning ;;
             7) setup_stealth_mode ;;
-            8) check_expiry; echo "Expiry check complete." ;;
-            9) systemctl stop wg-quick@wg0; rm -rf $WG_DIR; crontab -l | grep -v "wireguard_installer.sh" | crontab -; echo "Uninstalled."; exit 0 ;;
-            10) exit 0 ;;
+            8) toggle_anti_ddos ;;
+            9) check_expiry; echo "Expiry check complete." ;;
+            10) systemctl stop wg-quick@wg0; rm -rf $WG_DIR; crontab -l | grep -v "wireguard_installer.sh" | crontab -; echo "Uninstalled."; exit 0 ;;
+            11) exit 0 ;;
             *) echo -e "${RED}Invalid option.${NC}" ;;
         esac
     done

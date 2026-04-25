@@ -1,10 +1,10 @@
-# 🚀 WireGuard Zero-Config Auto-Installer (v3.2)
+# 🚀 WireGuard Zero-Config Auto-Installer (v3.3)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Bash](https://img.shields.io/badge/Language-Bash-4EAA25.svg)](https://www.gnu.org/software/bash/)
 [![WireGuard](https://img.shields.io/badge/VPN-WireGuard-88171A.svg)](https://www.wireguard.com/)
 
-The ultimate "Zero-Config" WireGuard deployment suite. Version 3.2 introduces **Time-Limited Access**, allowing you to set expiration dates for users and automatically block them when their time is up.
+The ultimate "Zero-Config" WireGuard deployment suite. Version 3.3 introduces **Anti-DDoS Blackhole Protection**, giving you a one-click toggle to harden your server against common network attacks.
 
 ---
 
@@ -12,13 +12,13 @@ The ultimate "Zero-Config" WireGuard deployment suite. Version 3.2 introduces **
 
 | Feature | Description |
 | :--- | :--- |
+| 🛡️ **Anti-DDoS** | One-click **Blackhole Toggle** to drop malicious traffic and harden the network stack. |
 | ⏳ **User Expiration** | Set access duration in days; users are automatically blocked upon expiry. |
 | 🤖 **Auto-Detection** | Automatically detects Public IP, Network Interface, and OS. |
 | 🧙 **Setup Wizard** | Interactive prompts guide you through the entire process. |
 | 📱 **Instant QR** | Scan a QR code on your phone to connect instantly. |
 | 🕵️ **Stealth Mode** | One-click obfuscation to bypass strict firewalls (Port 443). |
 | ⚡ **One-Click Tuning** | Instantly optimize your network stack for maximum speed. |
-| 🔒 **Auto-Security** | Keeps your server patched with automated security updates. |
 
 ---
 
@@ -32,7 +32,7 @@ wget https://raw.githubusercontent.com/happyhitzz/wireguard-auto-installer/main/
 
 ---
 
-## 🎮 Management Menu (v3.2)
+## 🎮 Management Menu (v3.3)
 
 1. **Install WireGuard:** Fully automated setup.
 2. **Add New Client:** Create peers with optional **Expiration Days**.
@@ -41,17 +41,20 @@ wget https://raw.githubusercontent.com/happyhitzz/wireguard-auto-installer/main/
 5. **Run Speed Test:** Verify your VPN performance.
 6. **Optimize Performance:** One-click kernel and network tuning.
 7. **Toggle Stealth Mode:** Bypass DPI and firewalls with one click.
-8. **Check/Force Expiry:** Manually trigger the expiration check.
-9. **Uninstall:** Cleanly remove everything from your system.
+8. **Toggle Anti-DDoS Blackhole:** Harden server against DDoS attacks.
+9. **Check/Force Expiry:** Manually trigger the expiration check.
+10. **Uninstall:** Cleanly remove everything from your system.
 
 ---
 
-## ⏳ How User Expiration Works
+## 🛡️ How Anti-DDoS Blackhole Works
 
-When adding a new client, the script will ask for the number of days the access should remain valid. 
-*   A background cron job checks for expired users every hour.
-*   Once a user expires, their peer is removed from the active WireGuard interface.
-*   Their configuration is commented out in the server file to prevent reconnection.
+When enabled, the script applies several kernel-level protections:
+*   **ICMP Drop:** Ignores all Ping requests to hide the server.
+*   **TCP SYN Cookies:** Protects against SYN flood attacks.
+*   **Spoofing Protection:** Enables strict reverse path filtering.
+*   **Bogus Response Ignore:** Drops invalid network responses.
+*   **Redirect Drop:** Prevents ICMP redirect attacks.
 
 ---
 
