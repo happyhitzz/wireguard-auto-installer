@@ -1,9 +1,10 @@
 #!/bin/bash
 
 # =================================================================
-# WireGuard Zero-Config Auto-Installer (v3.1)
+# WireGuard Zero-Config Auto-Installer (v3.2)
 # =================================================================
-# No manual config editing required. Everything is automated.
+# Features: Zero-Config, Stealth Mode, Performance Tuning,
+# and NEW: User Expiration (Time-Limited Access).
 # =================================================================
 
 # --- Configuration & Defaults ---
@@ -13,6 +14,7 @@ WG_PORT="51820"
 WG_PROTO="udp"
 STEALTH_PORT="443"
 STEALTH_PASS="mypassword123"
+EXPIRY_LOG="$WG_DIR/expiry.log"
 
 # --- Colors for Output ---
 RED='\033[0;31m'
@@ -56,15 +58,14 @@ get_main_interface() {
 install_wg() {
     echo -e "${YELLOW}Starting Zero-Config Installation...${NC}"
     
-    # 1. Install Dependencies
     case $OS in
         ubuntu|debian)
-            apt update && apt install -y wireguard qrencode curl iptables unattended-upgrades ethtool irqbalance wget tar bc
+            apt update && apt install -y wireguard qrencode curl iptables unattended-upgrades ethtool irqbalance wget tar bc cron
             dpkg-reconfigure -plow unattended-upgrades
             ;;
         centos|fedora)
             dnf install -y epel-release
-            dnf install -y wireguard-tools qrencode curl iptables dnf-automatic ethtool irqbalance wget tar bc
+            dnf install -y wireguard-tools qrencode curl iptables dnf-automatic ethtool irqbalance wget tar bc cronie
             sed -i 's/upgrade_type = default/upgrade_type = security/' /etc/dnf/automatic.conf
             systemctl enable --now dnf-automatic.timer
             ;;
@@ -72,18 +73,16 @@ install_wg() {
     
     mkdir -p $WG_DIR
     chmod 700 $WG_DIR
+    touch $EXPIRY_LOG
 
-    # 2. Auto-Generate Keys
     SERVER_PRIV=$(wg genkey)
     SERVER_PUB=$(echo "$SERVER_PRIV" | wg pubkey)
     echo "$SERVER_PRIV" > "$WG_DIR/server_private.key"
     echo "$SERVER_PUB" > "$WG_DIR/server_public.key"
 
-    # 3. Auto-Detect Network Settings
     get_main_interface
     get_public_ip
 
-    # 4. Generate Server Config
     cat <<EOF > $WG_CONF
 [Interface]
 Address = 10.0.0.1/24
@@ -93,22 +92,26 @@ PostUp = iptables -A FORWARD -i wg0 -j ACCEPT; iptables -t nat -A POSTROUTING -o
 PostDown = iptables -D FORWARD -i wg0 -j ACCEPT; iptables -t nat -D POSTROUTING -o $INTERFACE -j MASQUERADE; iptables -D FORWARD -o wg0 -j ACCEPT
 EOF
 
-    # 5. Enable IP Forwarding
     echo "net.ipv4.ip_forward=1" > /etc/sysctl.d/99-wireguard.conf
     sysctl -p /etc/sysctl.d/99-wireguard.conf
 
-    # 6. Start Service
     systemctl enable wg-quick@wg0
     systemctl start wg-quick@wg0
     
-    echo -e "${GREEN}WireGuard successfully installed on $INTERFACE!${NC}"
+    # Setup Cron Job for Expiry Check (every hour)
+    (crontab -l 2>/dev/null | grep -v "wireguard_installer.sh --check-expiry"; echo "0 * * * * $(realpath $0) --check-expiry") | crontab -
+    
+    echo -e "${GREEN}WireGuard successfully installed!${NC}"
 }
 
 add_client() {
     echo -e "${YELLOW}Adding a new client...${NC}"
-    read -p "Enter client name (e.g., MyPhone): " CLIENT_NAME
+    read -p "Enter client name: " CLIENT_NAME
     CLIENT_NAME=${CLIENT_NAME:-"client"}
     
+    read -p "Set expiration in days (0 for never): " EXPIRY_DAYS
+    EXPIRY_DAYS=${EXPIRY_DAYS:-0}
+
     LAST_IP=$(grep "AllowedIPs" $WG_CONF | tail -n1 | awk '{print $3}' | cut -d. -f4 | cut -d/ -f1)
     CLIENT_IP=$(( ${LAST_IP:-1} + 1 ))
 
@@ -137,6 +140,13 @@ EOF
 
     wg addconf wg0 <(echo -e "[Peer]\nPublicKey = $CLIENT_PUB\nAllowedIPs = 10.0.0.$CLIENT_IP/32")
 
+    # Log Expiry
+    if [[ $EXPIRY_DAYS -gt 0 ]]; then
+        EXPIRY_DATE=$(date -d "+$EXPIRY_DAYS days" +%s)
+        echo "$CLIENT_NAME:$CLIENT_PUB:$EXPIRY_DATE" >> $EXPIRY_LOG
+        echo -e "${YELLOW}Client will expire on $(date -d @$EXPIRY_DATE).${NC}"
+    fi
+
     # Generate Client Config
     get_public_ip
     SERVER_PUB=$(cat "$WG_DIR/server_public.key")
@@ -157,36 +167,48 @@ PersistentKeepalive = 25
 EOF
 
     echo -e "${GREEN}Client '$CLIENT_NAME' created!${NC}"
-    echo -e "Config file: $CLIENT_CONF_FILE"
-    
-    if pgrep -x "udp2raw" > /dev/null; then
-        echo -e "${YELLOW}NOTE: Stealth Mode is ON. Use 127.0.0.1:51820 in your app.${NC}"
-    fi
-    
-    echo -e "${YELLOW}Scan this QR Code with the WireGuard App:${NC}"
     qrencode -t ansiutf8 < "$CLIENT_CONF_FILE"
 }
 
+check_expiry() {
+    CURRENT_TIME=$(date +%s)
+    TEMP_LOG=$(mktemp)
+    RELOAD_NEEDED=false
+
+    while IFS=: read -r NAME PUB EXPIRY; do
+        if [[ $CURRENT_TIME -ge $EXPIRY ]]; then
+            echo -e "${RED}Expiring client: $NAME${NC}"
+            # Remove from running config
+            wg set wg0 peer "$PUB" remove
+            # Mark as expired in config file (comment out)
+            sed -i "/PublicKey = $PUB/,/AllowedIPs/ s/^/#EXPIRED# /" $WG_CONF
+            RELOAD_NEEDED=true
+        else
+            echo "$NAME:$PUB:$EXPIRY" >> $TEMP_LOG
+        fi
+    done < $EXPIRY_LOG
+
+    mv $TEMP_LOG $EXPIRY_LOG
+    if [[ "$RELOAD_NEEDED" == "true" ]]; then
+        systemctl restart wg-quick@wg0
+    fi
+}
+
 apply_performance_tuning() {
-    echo -e "${YELLOW}Applying Zero-Config Performance Tuning...${NC}"
+    echo -e "${YELLOW}Applying Performance Tuning...${NC}"
     get_main_interface
     if [[ -n "$INTERFACE" ]]; then
         ethtool -K "$INTERFACE" gso off gro off tso off &> /dev/null
-        ethtool -G "$INTERFACE" rx 4096 tx 4096 &> /dev/null
     fi
     systemctl enable --now irqbalance &> /dev/null
     cat <<EOF > /etc/sysctl.d/99-wg-ultimate.conf
 net.core.rmem_max = 67108864
 net.core.wmem_max = 67108864
-net.core.netdev_max_backlog = 250000
-net.ipv4.tcp_rmem = 4096 87380 67108864
-net.ipv4.tcp_wmem = 4096 65536 67108864
-net.core.default_qdisc = fq
 net.ipv4.tcp_congestion_control = bbr
-net.ipv4.tcp_fastopen = 3
+net.core.default_qdisc = fq
 EOF
     sysctl -p /etc/sysctl.d/99-wg-ultimate.conf &> /dev/null
-    echo -e "${GREEN}Performance optimized!${NC}"
+    echo -e "${GREEN}Optimized!${NC}"
 }
 
 setup_stealth_mode() {
@@ -207,23 +229,29 @@ setup_stealth_mode() {
 
 show_menu() {
     echo -e "\n${BLUE}=====================================${NC}"
-    echo -e "${BLUE}   WireGuard Zero-Config v3.1        ${NC}"
+    echo -e "${BLUE}   WireGuard Time-Limited v3.2       ${NC}"
     echo -e "${BLUE}=====================================${NC}"
-    echo "1) Install WireGuard (Auto-Detect)"
-    echo "2) Add New Client (QR Code)"
+    echo "1) Install WireGuard"
+    echo "2) Add New Client (with Expiry)"
     echo "3) List Clients"
     echo "4) Monitor Connections"
     echo "5) Run Speed Test"
-    echo "6) Optimize Performance (One-Click)"
-    echo "7) Toggle Stealth Mode (Port 443)"
-    echo "8) Uninstall"
-    echo "9) Exit"
-    read -p "Select [1-9]: " OPTION
+    echo "6) Optimize Performance"
+    echo "7) Toggle Stealth Mode"
+    echo "8) Check/Force Expiry Now"
+    echo "9) Uninstall"
+    echo "10) Exit"
+    read -p "Select [1-10]: " OPTION
 }
 
 # --- Main ---
 check_root
 detect_os
+
+if [[ "$1" == "--check-expiry" ]]; then
+    check_expiry
+    exit 0
+fi
 
 if [[ ! -d $WG_DIR ]]; then
     install_wg
@@ -239,8 +267,9 @@ else
             5) command -v speedtest-cli &> /dev/null || apt install -y speedtest-cli || dnf install -y speedtest-cli; speedtest-cli ;;
             6) apply_performance_tuning ;;
             7) setup_stealth_mode ;;
-            8) systemctl stop wg-quick@wg0; rm -rf $WG_DIR; echo "Uninstalled."; exit 0 ;;
-            9) exit 0 ;;
+            8) check_expiry; echo "Expiry check complete." ;;
+            9) systemctl stop wg-quick@wg0; rm -rf $WG_DIR; crontab -l | grep -v "wireguard_installer.sh" | crontab -; echo "Uninstalled."; exit 0 ;;
+            10) exit 0 ;;
             *) echo -e "${RED}Invalid option.${NC}" ;;
         esac
     done
