@@ -116,7 +116,7 @@ show_menu() {
     echo "33) Setup Blockchain-based Client Identity Management"
     echo "34) Run Cloud Backup Now"
     echo "35) Check for Updates Now"
-    echo "36) ${RED}PANIC BUTTON (Lockdown)${NC}"
+    echo -e "36) ${RED}PANIC BUTTON (Lockdown)${NC}"
     echo "37) Uninstall"
     echo "38) Exit"
     read -p "Select [0-38]: " OPTION
