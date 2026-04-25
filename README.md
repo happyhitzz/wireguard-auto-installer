@@ -83,6 +83,7 @@ Once installed, running the script again will open the **WireGuard Manager**:
 *   [**OVHcloud**](https://www.ovhcloud.com/) - Global reliability.
 *   [**NFOservers**](https://www.nfoservers.com/) - Low-latency gaming focus.
 *   [**Tempest Hosting**](https://tempest.net/) - Scalable and secure.
+*   [**100up.net**](https://100up.net/) - High-performance speed and reliability.
 
 ---
 
