@@ -1,10 +1,10 @@
-# 🚀 WireGuard Zero-Config Auto-Installer (v3.4)
+# 🚀 WireGuard Zero-Config Auto-Installer (v3.5)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Bash](https://img.shields.io/badge/Language-Bash-4EAA25.svg)](https://www.gnu.org/software/bash/)
 [![WireGuard](https://img.shields.io/badge/VPN-WireGuard-88171A.svg)](https://www.wireguard.com/)
 
-The ultimate "Zero-Config" WireGuard deployment suite. Version 3.4 introduces **Optional AI Attack Detection**, providing real-time monitoring and automated alerting for your VPN server.
+The ultimate "Zero-Config" WireGuard deployment suite. Version 3.5 introduces **Full Auto-Update**, ensuring your script, AI security module, and system dependencies are always running the latest and most secure versions.
 
 ---
 
@@ -12,13 +12,13 @@ The ultimate "Zero-Config" WireGuard deployment suite. Version 3.4 introduces **
 
 | Feature | Description |
 | :--- | :--- |
+| 🔄 **Full Auto-Update** | Automatically keeps the script, AI module, and system dependencies updated. |
 | 🤖 **AI Attack Detection** | Optional real-time log analysis to detect and alert on brute-force and handshake attacks. |
 | 🛡️ **Anti-DDoS** | One-click **Blackhole Toggle** to drop malicious traffic and harden the network stack. |
 | ⏳ **User Expiration** | Set access duration in days; users are automatically blocked upon expiry. |
 | 🤖 **Auto-Detection** | Automatically detects Public IP, Network Interface, and OS. |
 | 🧙 **Setup Wizard** | Interactive prompts guide you through the entire process. |
 | 📱 **Instant QR** | Scan a QR code on your phone to connect instantly. |
-| 🕵️ **Stealth Mode** | One-click obfuscation to bypass strict firewalls (Port 443). |
 
 ---
 
@@ -32,7 +32,7 @@ wget https://raw.githubusercontent.com/happyhitzz/wireguard-auto-installer/main/
 
 ---
 
-## 🎮 Management Menu (v3.4)
+## 🎮 Management Menu (v3.5)
 
 1. **Install WireGuard:** Fully automated setup.
 2. **Add New Client:** Create peers with optional **Expiration Days**.
@@ -43,18 +43,18 @@ wget https://raw.githubusercontent.com/happyhitzz/wireguard-auto-installer/main/
 7. **Toggle Stealth Mode:** Bypass DPI and firewalls with one click.
 8. **Toggle Anti-DDoS Blackhole:** Harden server against DDoS attacks.
 9. **Toggle AI Attack Detector:** Enable/Disable optional AI-driven security monitoring.
-10. **Check/Force Expiry:** Manually trigger the expiration check.
+10. **Check for Updates Now:** Manually trigger a full system and script update.
 11. **Uninstall:** Cleanly remove everything from your system.
 
 ---
 
-## 🤖 How AI Attack Detection Works
+## 🔄 How Auto-Update Works
 
-When enabled, the script deploys a lightweight Python-based detector that:
-*   **Monitors Logs:** Watches system and WireGuard logs in real-time.
-*   **Detects Patterns:** Identifies brute-force attempts and failed handshakes.
-*   **Discord Alerts:** Sends detailed, color-coded alerts to your Discord channel via Webhooks.
-*   **Automated Service:** Runs as a background systemd service for 24/7 protection.
+The script implements a robust self-updating mechanism:
+*   **Script Self-Update:** Checks for the latest version on GitHub and updates itself automatically.
+*   **AI Module Update:** Keeps the AI attack detection script synchronized with the latest patterns.
+*   **System Security:** Leverages `unattended-upgrades` or `dnf-automatic` for OS-level security patches.
+*   **Scheduled Task:** A daily cron job ensures your server stays updated without manual intervention.
 
 ---
 

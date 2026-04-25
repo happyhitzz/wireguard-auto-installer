@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # =================================================================
-# WireGuard Zero-Config Auto-Installer (v3.4)
+# WireGuard Zero-Config Auto-Installer (v3.5)
 # =================================================================
 # Features: Zero-Config, Stealth Mode, Performance Tuning,
-# User Expiration, Anti-DDoS, and NEW: Optional AI Attack Detection.
+# User Expiration, Anti-DDoS, AI Detection, and NEW: Full Auto-Update.
 # =================================================================
 
 # --- Configuration & Defaults ---
@@ -18,6 +18,8 @@ EXPIRY_LOG="$WG_DIR/expiry.log"
 BLACKHOLE_CONF="/etc/sysctl.d/99-anti-ddos.conf"
 AI_DETECTOR_SCRIPT="$WG_DIR/ai_attack_detector.py"
 AI_SERVICE_NAME="wg-ai-detector"
+SCRIPT_URL="https://raw.githubusercontent.com/happyhitzz/wireguard-auto-installer/main/wireguard_installer.sh"
+AI_SCRIPT_URL="https://raw.githubusercontent.com/happyhitzz/wireguard-auto-installer/main/ai_attack_detector.py"
 
 # --- Colors for Output ---
 RED='\033[0;31m'
@@ -53,6 +55,41 @@ get_main_interface() {
     INTERFACE=$(ip route get 8.8.8.8 | awk '{print $5; exit}')
     if [[ -z "$INTERFACE" ]]; then
         INTERFACE=$(ip -o link show | awk -F': ' '{print $2}' | grep -v "lo" | head -n1)
+    fi
+}
+
+# --- Auto-Update Logic ---
+
+self_update() {
+    echo -e "${YELLOW}Checking for script updates...${NC}"
+    TMP_FILE=$(mktemp)
+    if wget -q $SCRIPT_URL -O "$TMP_FILE"; then
+        if ! diff "$0" "$TMP_FILE" > /dev/null; then
+            echo -e "${GREEN}New version found! Updating...${NC}"
+            mv "$TMP_FILE" "$0"
+            chmod +x "$0"
+            echo -e "${GREEN}Update complete. Restarting script...${NC}"
+            exec "$0" "$@"
+        else
+            echo -e "${BLUE}Script is already up to date.${NC}"
+            rm "$TMP_FILE"
+        fi
+    else
+        echo -e "${RED}Failed to check for updates.${NC}"
+        rm "$TMP_FILE"
+    fi
+}
+
+update_ai_module() {
+    if [[ -f $AI_DETECTOR_SCRIPT ]]; then
+        echo -e "${YELLOW}Updating AI Security Module...${NC}"
+        if wget -q $AI_SCRIPT_URL -O "$AI_DETECTOR_SCRIPT.tmp"; then
+            mv "$AI_DETECTOR_SCRIPT.tmp" "$AI_DETECTOR_SCRIPT"
+            if systemctl is-active --quiet $AI_SERVICE_NAME; then
+                systemctl restart $AI_SERVICE_NAME
+            fi
+            echo -e "${GREEN}AI Module updated.${NC}"
+        fi
     fi
 }
 
@@ -101,7 +138,10 @@ EOF
     systemctl enable wg-quick@wg0
     systemctl start wg-quick@wg0
     
-    (crontab -l 2>/dev/null | grep -v "wireguard_installer.sh --check-expiry"; echo "0 * * * * $(realpath $0) --check-expiry") | crontab -
+    # Setup Cron Jobs (Expiry Check & Auto-Update)
+    (crontab -l 2>/dev/null | grep -v "wireguard_installer.sh"; 
+     echo "0 * * * * $(realpath $0) --check-expiry";
+     echo "0 3 * * * $(realpath $0) --auto-update") | crontab -
     
     echo -e "${GREEN}WireGuard successfully installed!${NC}"
 }
@@ -251,19 +291,13 @@ toggle_ai_detector() {
         echo -e "${RED}AI Attack Detector Disabled.${NC}"
     else
         echo -e "${YELLOW}Enabling AI Attack Detector...${NC}"
-        
-        # Ensure Python script exists
         if [[ ! -f $AI_DETECTOR_SCRIPT ]]; then
-            # Download or create the script if missing
-            cp $(dirname $(realpath $0))/ai_attack_detector.py $AI_DETECTOR_SCRIPT
+            wget -q $AI_SCRIPT_URL -O $AI_DETECTOR_SCRIPT
         fi
-
         read -p "Enter Discord Webhook URL (optional): " WEBHOOK
         if [[ -n "$WEBHOOK" ]]; then
             sed -i "s|DISCORD_WEBHOOK = .*|DISCORD_WEBHOOK = \"$WEBHOOK\"|" $AI_DETECTOR_SCRIPT
         fi
-
-        # Create Systemd Service
         cat <<EOF > /etc/systemd/system/$AI_SERVICE_NAME.service
 [Unit]
 Description=WireGuard AI Attack Detector
@@ -287,7 +321,7 @@ EOF
 
 show_menu() {
     echo -e "\n${BLUE}=====================================${NC}"
-    echo -e "${BLUE}   WireGuard AI-Powered v3.4         ${NC}"
+    echo -e "${BLUE}   WireGuard Auto-Update v3.5        ${NC}"
     echo -e "${BLUE}=====================================${NC}"
     echo "1) Install WireGuard"
     echo "2) Add New Client (with Expiry)"
@@ -297,8 +331,8 @@ show_menu() {
     echo "6) Optimize Performance"
     echo "7) Toggle Stealth Mode"
     echo "8) Toggle Anti-DDoS Blackhole"
-    echo "9) Toggle AI Attack Detector (Optional)"
-    echo "10) Check/Force Expiry Now"
+    echo "9) Toggle AI Attack Detector"
+    echo "10) Check for Updates Now"
     echo "11) Uninstall"
     echo "12) Exit"
     read -p "Select [1-12]: " OPTION
@@ -308,8 +342,15 @@ show_menu() {
 check_root
 detect_os
 
+# Handle background flags
 if [[ "$1" == "--check-expiry" ]]; then
     check_expiry
+    exit 0
+fi
+
+if [[ "$1" == "--auto-update" ]]; then
+    self_update --quiet
+    update_ai_module
     exit 0
 fi
 
@@ -329,7 +370,7 @@ else
             7) setup_stealth_mode ;;
             8) toggle_anti_ddos ;;
             9) toggle_ai_detector ;;
-            10) check_expiry; echo "Expiry check complete." ;;
+            10) self_update; update_ai_module ;;
             11) systemctl stop wg-quick@wg0; systemctl stop $AI_SERVICE_NAME &> /dev/null; rm -rf $WG_DIR; crontab -l | grep -v "wireguard_installer.sh" | crontab -; echo "Uninstalled."; exit 0 ;;
             12) exit 0 ;;
             *) echo -e "${RED}Invalid option.${NC}" ;;
