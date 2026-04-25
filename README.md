@@ -1,80 +1,103 @@
 # 🚀 WireGuard Auto-Installer
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Bash](https://img.shields.io/badge/Language-Bash-4EAA25.svg)](https://www.gnu.org/software/bash/)
+[![WireGuard](https://img.shields.io/badge/VPN-WireGuard-88171A.svg)](https://www.wireguard.com/)
 
-This script provides a **streamlined and automated solution** for deploying a WireGuard VPN server on various Linux distributions. Get your secure VPN up and running with minimal effort!
+A streamlined, automated solution for deploying a secure WireGuard VPN server on various Linux distributions. Get your VPN up and running with minimal effort, complete with automatic client configuration and QR code generation.
 
-## ✨ Features
+---
 
-*   **Operating System Detection:** 🐧 Automatically identifies and configures WireGuard for Ubuntu, Debian, CentOS, and Fedora.
-*   **Customizable Port:** ⚙️ Easily specify your desired WireGuard listening port (default: `51820`).
-*   **Secure Protocol:** 🛡️ Leverages WireGuard's efficient and secure UDP-based protocol.
-*   **Cutting-Edge Encryption:** 🔒 Utilizes WireGuard's built-in, modern cryptographic suite (ChaCha20-Poly1305) for robust security.
-*   **Effortless Client Configuration:** 📱 Generates client configuration files and convenient QR codes for quick setup on your devices.
+## ✨ Key Features
 
-## 🛠️ System Requirements & Prerequisites
+| Feature | Description |
+| :--- | :--- |
+| 🐧 **OS Detection** | Automatically identifies and configures for Ubuntu, Debian, CentOS, and Fedora. |
+| ⚙️ **Custom Port** | Easily specify your desired WireGuard listening port (default: `51820`). |
+| 🛡️ **Secure Protocol** | Leverages WireGuard's efficient and secure UDP-based protocol. |
+| 🔒 **Modern Encryption** | Utilizes WireGuard's built-in cryptographic suite (ChaCha20-Poly1305). |
+| 📱 **Easy Client Setup** | Generates client configuration files and QR codes for instant mobile setup. |
 
-Before running the WireGuard auto-installer script, ensure your system meets the following requirements and has the necessary tools installed:
+---
 
-*   **Operating System:** A fresh installation of one of the following Linux distributions:
-    *   Ubuntu (20.04 LTS or newer)
-    *   Debian (10 Buster or newer)
-    *   CentOS (7 or newer)
-    *   Fedora (32 or newer)
-*   **Root/Sudo Privileges:** The script requires `sudo` access to install packages and configure system settings.
-*   **Essential Utilities:** The following command-line tools are required for the script to function correctly. Most are pre-installed on modern Linux distributions, but you can install them if missing:
-    *   `wget`: Used to download the script.
-        ```bash
-        # Debian/Ubuntu
-        sudo apt update && sudo apt install -y wget
-        # CentOS/Fedora
-        sudo dnf install -y wget
-        ```
-    *   `curl`: Used to detect the server's public IP address.
-        ```bash
-        # Debian/Ubuntu
-        sudo apt update && sudo apt install -y curl
-        # CentOS/Fedora
-        sudo dnf install -y curl
-        ```
-    *   `qrencode`: Used to generate QR codes for client configurations.
-        ```bash
-        # Debian/Ubuntu
-        sudo apt update && sudo apt install -y qrencode
-        # CentOS/Fedora
-        sudo dnf install -y qrencode
-        ```
-    *   `iptables`: For firewall rules (usually pre-installed).
-    *   `systemctl`: For managing system services (standard on systemd-based distros).
+## 🛠️ System Requirements
 
-## ⚡ Quick Start
+Before running the installer, ensure your system meets the following criteria:
 
-Follow these simple steps to get your WireGuard VPN server installed:
+### Supported Operating Systems
+*   **Ubuntu:** 20.04 LTS or newer
+*   **Debian:** 10 Buster or newer
+*   **CentOS:** 7 or newer
+*   **Fedora:** 32 or newer
 
-1.  **Download the script:**
-    ```bash
-    wget https://raw.githubusercontent.com/happyhitzz/wireguard-auto-installer/main/wireguard_installer.sh
-    ```
-2.  **Make the script executable:**
-    ```bash
-    chmod +x wireguard_installer.sh
-    ```
-3.  **Run the installer with superuser privileges:**
-    ```bash
-    sudo ./wireguard_installer.sh
-    ```
+### Required Utilities
+The script requires `sudo` privileges and the following tools. If they are missing, use the commands below to install them:
 
-    The script will guide you through the installation, configure your server, and display the client configuration along with a QR code in your terminal. Save these details to set up your client devices.
+| Utility | Purpose | Debian / Ubuntu Command | CentOS / Fedora Command |
+| :--- | :--- | :--- | :--- |
+| `wget` | Downloading the script | `sudo apt install -y wget` | `sudo dnf install -y wget` |
+| `curl` | Detecting public IP | `sudo apt install -y curl` | `sudo dnf install -y curl` |
+| `qrencode` | Generating QR codes | `sudo apt install -y qrencode` | `sudo dnf install -y qrencode` |
 
-## ⚠️ Important Notes
+*(Note: `iptables` and `systemctl` are also required but are typically pre-installed on modern distributions.)*
 
-*   **Firewall Configuration:** Ensure your server's firewall is configured to allow incoming UDP traffic on the chosen WireGuard port.
-*   **Public IP Address:** The script attempts to automatically detect your server's public IP. Please verify its accuracy during the setup process.
-*   **Encryption Details:** WireGuard exclusively uses ChaCha20-Poly1305 for symmetric encryption. It does not offer alternative ciphers like AES, as its design prioritizes a fixed, modern, and highly secure cryptographic standard.
+---
 
-## 📄 License
+## ⚡ Quick Start Guide
 
-This project is proudly open-source and distributed under the [MIT License](https://opensource.org/licenses/MIT). See the `LICENSE` file for more details.
+Follow these three simple steps to deploy your VPN:
+
+**1. Download the script:**
+```bash
+wget https://raw.githubusercontent.com/happyhitzz/wireguard-auto-installer/main/wireguard_installer.sh
+```
+
+**2. Make the script executable:**
+```bash
+chmod +x wireguard_installer.sh
+```
+
+**3. Run the installer:**
+```bash
+sudo ./wireguard_installer.sh
+```
+
+> **Note:** The script will guide you through the installation, configure your server, and display the client configuration along with a QR code in your terminal.
+
+---
+
+## ⚠️ Important Considerations
+
+*   **Firewall Configuration:** You **must** configure your server's firewall to allow incoming UDP traffic on your chosen WireGuard port (default is `51820`).
+*   **Public IP Address:** The script attempts to auto-detect your server's public IP. Please verify its accuracy during the setup process.
+*   **Encryption Details:** WireGuard exclusively uses ChaCha20-Poly1305 for symmetric encryption. It does not offer alternative ciphers like AES, prioritizing a fixed, modern, and highly secure standard.
+
+---
+
+## ❓ Troubleshooting & Common Issues
+
+| Issue | Potential Cause | Solution |
+| :--- | :--- | :--- |
+| **Client Cannot Connect** | Firewall blocking traffic | Ensure UDP port `51820` (or your custom port) is open. Example: `sudo ufw allow 51820/udp` |
+| | Incorrect Endpoint IP | Verify the `Endpoint` IP in your `client.conf` matches your server's current public IP. |
+| | Service not running | Check server status: `sudo systemctl status wg-quick@wg0` |
+| **No Internet Access** | IP Forwarding disabled | Verify with `sysctl net.ipv4.ip_forward`. If not `1`, run: `echo "net.ipv4.ip_forward=1" \| sudo tee -a /etc/sysctl.conf && sudo sysctl -p` |
+| | NAT Rules missing | Check `PostUp`/`PostDown` rules in `/etc/wireguard/wg0.conf`. |
+| | DNS Issues | Try changing the DNS in `client.conf` to `8.8.8.8` or `1.1.1.1`. |
+| **Installation Fails** | Unsupported OS | Refer to the [official WireGuard guide](https://www.wireguard.com/install/) for manual installation. |
+| | Package Manager error | Run `sudo apt update` or `sudo dnf update` before running the script. |
+
+---
+
+## ☁️ Recommended Hosting Providers
+
+For optimal performance and reliability, we recommend deploying your WireGuard server with one of these trusted providers:
+
+*   [**OVHcloud**](https://www.ovhcloud.com/): Known for robust infrastructure, competitive pricing, and global data centers.
+*   [**NFOservers**](https://www.nfoservers.com/): A popular choice for gaming and high-performance applications, offering low-latency networks.
+*   [**Tempest Hosting**](https://tempest.host/): Provides reliable and scalable hosting solutions suitable for various VPN needs.
+
+---
 
 ## 🤝 Contact & Support
 
@@ -83,40 +106,8 @@ Should you encounter any issues or have questions, feel free to reach out on Dis
 *   **Usagi#4255**
 *   **Maajjins**
 
-## ❓ Common Issues & Solutions
+---
 
-Here are some common problems users might encounter and their solutions:
+## 📄 License
 
-### 1. VPN Client Cannot Connect
-*   **Issue:** Your WireGuard client (phone, laptop) fails to connect to the VPN server.
-*   **Solution:**
-    *   **Firewall:** Ensure your server's firewall (e.g., `ufw`, `firewalld`) allows incoming UDP traffic on the WireGuard port (default `51820`). You might need to open the port: `sudo ufw allow 51820/udp` or `sudo firewall-cmd --add-port=51820/udp --permanent && sudo firewall-cmd --reload`.
-    *   **Public IP:** Verify that the `Endpoint` IP address in your client configuration (`client.conf`) is the correct public IP of your server. If your server's IP changed, update the client configuration.
-    *   **Server Status:** Check if the WireGuard service is running on your server: `sudo systemctl status wg-quick@wg0`.
-
-### 2. No Internet Access After Connecting to VPN
-*   **Issue:** The VPN client connects successfully, but you cannot access the internet.
-*   **Solution:**
-    *   **IP Forwarding:** Ensure IP forwarding is enabled on your server. The script attempts to enable it, but you can verify with `sysctl net.ipv4.ip_forward`. It should return `net.ipv4.ip_forward = 1`. If not, run `echo "net.ipv4.ip_forward=1" | sudo tee -a /etc/sysctl.conf && sudo sysctl -p`.
-    *   **NAT Rules:** Confirm that the `PostUp` and `PostDown` rules in `/etc/wireguard/wg0.conf` are correctly configured for Network Address Translation (NAT). These rules allow traffic from the VPN to exit through your server's public interface.
-    *   **DNS:** Check the DNS server configured in your client.conf. Try using public DNS servers like `8.8.8.8` (Google DNS) or `1.1.1.1` (Cloudflare DNS).
-
-### 3. Script Fails to Install WireGuard
-*   **Issue:** The script encounters an error during the WireGuard installation phase.
-*   **Solution:**
-    *   **Unsupported OS:** While the script supports major distributions, if you are on a less common Linux distribution, manual installation might be required. Refer to the [official WireGuard installation guide](https://www.wireguard.com/install/) for your specific OS.
-    *   **Package Manager Issues:** Ensure your system's package manager (`apt`, `dnf`) is up-to-date and functional. Run `sudo apt update` or `sudo dnf update` before running the script.
-
-
-## ☁️ Recommended Hosting Providers
-
-For optimal performance and reliability when deploying your WireGuard VPN server, we recommend the following hosting providers:
-
-*   **OVHcloud:** Known for their robust infrastructure, competitive pricing, and global data centers.
-    *   [Visit OVHcloud](https://www.ovhcloud.com/)
-*   **NFOservers:** A popular choice for gaming and high-performance applications, offering dedicated servers and low-latency networks.
-    *   [Visit NFOservers](https://www.nfoservers.com/)
-*   **Tempest Hosting:** Provides reliable and scalable hosting solutions, suitable for various VPN deployment needs.
-    *   [Visit Tempest Hosting](https://tempest.host/)
-
-These providers offer a range of services that can complement your WireGuard setup, ensuring a stable and fast VPN experience.
+This project is open-source and distributed under the [MIT License](https://opensource.org/licenses/MIT). See the `LICENSE` file for more details.
