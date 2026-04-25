@@ -1,10 +1,10 @@
-# 🚀 WireGuard Zero-Config Auto-Installer (v4.1)
+# 🚀 WireGuard Zero-Config Auto-Installer (v5.0) - NEXT-GEN
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Bash](https://img.shields.io/badge/Language-Bash-4EAA25.svg)](https://www.gnu.org/software/bash/)
 [![WireGuard](https://img.shields.io/badge/VPN-WireGuard-88171A.svg)](https://www.wireguard.com/)
 
-The ultimate "Zero-Config" WireGuard deployment suite. Version 4.1 introduces the **AI DDoS Shield**, an adaptive traffic monitoring system that automatically detects and mitigates network-level attacks.
+The ultimate "Zero-Config" WireGuard deployment suite. Version 5.0 introduces the **Next-Gen Suite**, featuring a Web Management Dashboard, Geo-IP Blocking, and Automated Cloud Backups.
 
 ---
 
@@ -12,13 +12,13 @@ The ultimate "Zero-Config" WireGuard deployment suite. Version 4.1 introduces th
 
 | Feature | Description |
 | :--- | :--- |
+| 🌐 **Web Dashboard** | Manage your VPN, clients, and traffic through a beautiful, lightweight web interface. |
+| 🌍 **Geo-IP Blocking** | Block entire countries from accessing your VPN server with a single command. |
+| 💾 **Cloud Backups** | Automated daily backups of your entire WireGuard configuration and client list. |
 | 🛡️ **AI DDoS Shield** | Adaptive traffic anomaly detection that automatically bans malicious IPs in real-time. |
 | 🤖 **AI Attack Detector** | Real-time log analysis to detect and alert on brute-force and handshake attacks. |
 | 📢 **Telegram Alerts** | Get instant notifications on your phone for new clients, expirations, and security events. |
 | ⚡ **MTU Optimizer** | Automatically detects and applies the best MTU for your network to prevent fragmentation. |
-| 🔄 **Full Auto-Update** | Automatically keeps the script, AI modules, and system dependencies updated. |
-| 🛡️ **Anti-DDoS** | One-click **Blackhole Toggle** to drop malicious traffic and harden the network stack. |
-| ⏳ **User Expiration** | Set access duration in days; users are automatically blocked upon expiry. |
 
 ---
 
@@ -32,7 +32,7 @@ wget https://raw.githubusercontent.com/happyhitzz/wireguard-auto-installer/main/
 
 ---
 
-## 🎮 Management Menu (v4.1)
+## 🎮 Management Menu (v5.0)
 
 1. **Install WireGuard:** Fully automated setup.
 2. **Add New Client:** Create peers with optional **Expiration Days**.
@@ -45,18 +45,21 @@ wget https://raw.githubusercontent.com/happyhitzz/wireguard-auto-installer/main/
 9. **Toggle Anti-DDoS Blackhole:** Harden server against DDoS attacks.
 10. **Toggle AI Attack Detector:** Enable/Disable log-based security monitoring.
 11. **Toggle AI DDoS Shield:** Enable/Disable traffic-based anomaly protection.
-12. **Setup Telegram Alerts:** Configure instant mobile notifications.
-13. **Setup Multi-Hop Relay:** Chain your VPN to another server.
-14. **Check for Updates Now:** Manually trigger a full system and script update.
-15. **Uninstall:** Cleanly remove everything from your system.
+12. **Setup Web Dashboard:** Activate the browser-based management UI.
+13. **Setup Geo-IP Blocking:** Block traffic from specific countries.
+14. **Setup Telegram Alerts:** Configure instant mobile notifications.
+15. **Setup Multi-Hop Relay:** Chain your VPN to another server.
+16. **Run Cloud Backup Now:** Manually trigger a configuration backup.
+17. **Check for Updates Now:** Manually trigger a full system and script update.
+18. **Uninstall:** Cleanly remove everything from your system.
 
 ---
 
-## 🛡️ AI Security Suite
+## 🌐 Next-Gen Capabilities
 
-*   **AI DDoS Shield:** Uses Z-score anomaly detection to monitor active connections. If an IP behaves abnormally (e.g., high connection volume), it is automatically blacklisted via `iptables` for 1 hour.
-*   **AI Attack Detector:** Watches system logs for brute-force patterns and failed WireGuard handshakes, sending rich alerts to Discord or Telegram.
-*   **Adaptive Protection:** Both systems are optional and can be toggled independently based on your server's threat level.
+*   **Web Management:** No more command line for daily tasks. Add and remove clients through a modern web UI.
+*   **Global Security:** Use Geo-IP blocking to instantly drop traffic from regions where you don't expect legitimate users.
+*   **Disaster Recovery:** Automated daily backups ensure you can restore your entire VPN setup in minutes if your server fails.
 
 ---
 

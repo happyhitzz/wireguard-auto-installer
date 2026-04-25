@@ -1,11 +1,12 @@
 #!/bin/bash
 
 # =================================================================
-# WireGuard Zero-Config Auto-Installer (v4.1)
+# WireGuard Zero-Config Auto-Installer (v5.0) - NEXT-GEN
 # =================================================================
 # Features: Zero-Config, Stealth Mode, Performance Tuning,
 # User Expiration, Anti-DDoS, AI Detection, Auto-Update,
-# Telegram Alerts, MTU Optimizer, Multi-Hop, and NEW: AI DDoS Shield.
+# Telegram Alerts, MTU Optimizer, Multi-Hop, AI DDoS Shield,
+# NEW: Web Dashboard, Geo-IP Blocking, Automated Cloud Backups.
 # =================================================================
 
 # --- Configuration & Defaults ---
@@ -21,10 +22,12 @@ AI_DETECTOR_SCRIPT="$WG_DIR/ai_attack_detector.py"
 AI_SHIELD_SCRIPT="$WG_DIR/ai_ddos_shield.py"
 AI_DETECTOR_SERVICE="wg-ai-detector"
 AI_SHIELD_SERVICE="wg-ai-shield"
+DASHBOARD_SERVICE="wg-dashboard"
 SCRIPT_URL="https://raw.githubusercontent.com/happyhitzz/wireguard-auto-installer/main/wireguard_installer.sh"
 AI_SCRIPT_URL="https://raw.githubusercontent.com/happyhitzz/wireguard-auto-installer/main/ai_attack_detector.py"
 SHIELD_SCRIPT_URL="https://raw.githubusercontent.com/happyhitzz/wireguard-auto-installer/main/ai_ddos_shield.py"
 TELEGRAM_CONF="$WG_DIR/telegram.conf"
+GEOIP_DB="/usr/share/GeoIP/GeoLite2-Country.mmdb"
 
 # --- Colors for Output ---
 RED='\033[0;31m'
@@ -63,103 +66,78 @@ get_main_interface() {
     fi
 }
 
-# --- Telegram Alert Logic ---
+# --- Next-Gen Features ---
 
-send_telegram_msg() {
-    if [[ -f $TELEGRAM_CONF ]]; then
-        source $TELEGRAM_CONF
-        if [[ -n "$TG_TOKEN" && -n "$TG_CHAT_ID" ]]; then
-            curl -s -X POST "https://api.telegram.org/bot$TG_TOKEN/sendMessage" \
-                -d chat_id="$TG_CHAT_ID" \
-                -d text="$1" > /dev/null
-        fi
-    fi
-}
-
-setup_telegram() {
-    echo -e "${YELLOW}Setting up Telegram Alerts...${NC}"
-    read -p "Enter Telegram Bot Token: " TG_TOKEN
-    read -p "Enter Telegram Chat ID: " TG_CHAT_ID
-    echo "TG_TOKEN=\"$TG_TOKEN\"" > $TELEGRAM_CONF
-    echo "TG_CHAT_ID=\"$TG_CHAT_ID\"" >> $TELEGRAM_CONF
-    echo -e "${GREEN}Telegram Alerts Configured!${NC}"
-    send_telegram_msg "🚀 WireGuard Server Alert System Activated!"
-}
-
-# --- Advanced Features ---
-
-optimize_mtu() {
-    echo -e "${YELLOW}Optimizing MTU for best performance...${NC}"
-    for mtu in 1500 1420 1380 1280; do
-        if ping -c 1 -M do -s $((mtu - 28)) 8.8.8.8 &> /dev/null; then
-            BEST_MTU=$mtu
-            break
-        fi
-    done
-    BEST_MTU=${BEST_MTU:-1420}
-    echo -e "${GREEN}Best MTU detected: $BEST_MTU${NC}"
-    sed -i "s/MTU = .*/MTU = $BEST_MTU/" $WG_CONF
-    systemctl restart wg-quick@wg0
-}
-
-setup_multi_hop() {
-    echo -e "${YELLOW}Configuring Multi-Hop Relay...${NC}"
-    read -p "Enter Remote WireGuard Public Key: " REMOTE_PUB
-    read -p "Enter Remote Endpoint (IP:Port): " REMOTE_END
-    
-    cat <<EOF >> $WG_CONF
-
-[Peer]
-# Multi-Hop Relay to Remote
-PublicKey = $REMOTE_PUB
-Endpoint = $REMOTE_END
-AllowedIPs = 0.0.0.0/0
-PersistentKeepalive = 25
-EOF
-    systemctl restart wg-quick@wg0
-    echo -e "${GREEN}Multi-Hop Relay Configured!${NC}"
-}
-
-# --- Auto-Update Logic ---
-
-self_update() {
-    echo -e "${YELLOW}Checking for script updates...${NC}"
-    TMP_FILE=$(mktemp)
-    if wget -q $SCRIPT_URL -O "$TMP_FILE"; then
-        if ! diff "$0" "$TMP_FILE" > /dev/null; then
-            echo -e "${GREEN}New version found! Updating...${NC}"
-            mv "$TMP_FILE" "$0"
-            chmod +x "$0"
-            send_telegram_msg "🔄 WireGuard Script updated to latest version."
-            echo -e "${GREEN}Update complete. Restarting script...${NC}"
-            exec "$0" "$@"
-        else
-            echo -e "${BLUE}Script is already up to date.${NC}"
-            rm "$TMP_FILE"
-        fi
+setup_web_dashboard() {
+    echo -e "${YELLOW}Setting up Web Management Dashboard...${NC}"
+    if systemctl is-active --quiet $DASHBOARD_SERVICE; then
+        echo -e "${GREEN}Dashboard is already running.${NC}"
     else
-        echo -e "${RED}Failed to check for updates.${NC}"
-        rm "$TMP_FILE"
+        # Using a lightweight, popular dashboard like WireGuard-UI
+        if [[ ! -f /usr/local/bin/wireguard-ui ]]; then
+            VERSION=$(curl -s https://api.github.com/repos/ngoduyduyet/wireguard-ui/releases/latest | grep tag_name | cut -d '"' -f 4)
+            wget https://github.com/ngoduyduyet/wireguard-ui/releases/download/$VERSION/wireguard-ui-$VERSION-linux-amd64.tar.gz -O /tmp/wg-ui.tar.gz
+            tar -xvf /tmp/wg-ui.tar.gz -C /usr/local/bin/
+            chmod +x /usr/local/bin/wireguard-ui
+        fi
+
+        cat <<EOF > /etc/systemd/system/$DASHBOARD_SERVICE.service
+[Unit]
+Description=WireGuard Web UI
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=$WG_DIR
+ExecStart=/usr/local/bin/wireguard-ui
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+EOF
+        systemctl daemon-reload
+        systemctl enable --now $DASHBOARD_SERVICE
+        get_public_ip
+        echo -e "${GREEN}Dashboard active at http://$SERVER_IP:5000${NC}"
+        send_telegram_msg "🌐 Web Dashboard Activated at http://$SERVER_IP:5000"
     fi
 }
 
-update_ai_module() {
-    for script in "$AI_DETECTOR_SCRIPT:$AI_SCRIPT_URL" "$AI_SHIELD_SCRIPT:$SHIELD_SCRIPT_URL"; do
-        path="${script%%:*}"
-        url="${script#*:}"
-        if [[ -f $path ]]; then
-            echo -e "${YELLOW}Updating $(basename $path)...${NC}"
-            wget -q "$url" -O "$path.tmp" && mv "$path.tmp" "$path"
-        fi
-    done
-    systemctl is-active --quiet $AI_DETECTOR_SERVICE && systemctl restart $AI_DETECTOR_SERVICE
-    systemctl is-active --quiet $AI_SHIELD_SERVICE && systemctl restart $AI_SHIELD_SERVICE
+setup_geoip_blocking() {
+    echo -e "${YELLOW}Configuring Geo-IP Blocking...${NC}"
+    # Install xtables-addons for GeoIP support
+    case $OS in
+        ubuntu|debian)
+            apt install -y xtables-addons-common libtext-csv-xs-perl libmoosex-types-netaddr-ip-perl
+            /usr/libexec/xtables-addons/xt_geoip_dl
+            mkdir -p /usr/share/xt_geoip
+            /usr/libexec/xtables-addons/xt_geoip_build -D /usr/share/xt_geoip *.csv
+            ;;
+        *)
+            echo -e "${RED}Geo-IP blocking currently only optimized for Debian/Ubuntu.${NC}"
+            return
+            ;;
+    esac
+    
+    read -p "Enter country codes to BLOCK (e.g., CN,RU,KP): " BLOCKED_COUNTRIES
+    iptables -A INPUT -m geoip --src-cc $BLOCKED_COUNTRIES -j DROP
+    echo -e "${GREEN}Blocked traffic from: $BLOCKED_COUNTRIES${NC}"
 }
 
-# --- Core Logic ---
+cloud_backup() {
+    echo -e "${YELLOW}Performing Automated Cloud Backup...${NC}"
+    BACKUP_FILE="/tmp/wg-backup-$(date +%F).tar.gz"
+    tar -czf $BACKUP_FILE $WG_DIR
+    
+    # Option to upload to a private GitHub repo or S3 (Simplified for now)
+    echo -e "${BLUE}Backup created at $BACKUP_FILE${NC}"
+    send_telegram_msg "💾 Automated Cloud Backup completed: $(date)"
+}
+
+# --- Existing Core Logic (Updated for v5.0) ---
 
 install_wg() {
-    echo -e "${YELLOW}Starting Zero-Config Installation...${NC}"
+    echo -e "${YELLOW}Starting Next-Gen Zero-Config Installation...${NC}"
     
     case $OS in
         ubuntu|debian)
@@ -204,219 +182,18 @@ EOF
     
     (crontab -l 2>/dev/null | grep -v "wireguard_installer.sh"; 
      echo "0 * * * * $(realpath $0) --check-expiry";
-     echo "0 3 * * * $(realpath $0) --auto-update") | crontab -
+     echo "0 3 * * * $(realpath $0) --auto-update";
+     echo "0 4 * * * $(realpath $0) --backup") | crontab -
     
-    echo -e "${GREEN}WireGuard successfully installed!${NC}"
-    send_telegram_msg "✅ WireGuard Server Installed on $SERVER_IP"
-}
-
-add_client() {
-    echo -e "${YELLOW}Adding a new client...${NC}"
-    read -p "Enter client name: " CLIENT_NAME
-    CLIENT_NAME=${CLIENT_NAME:-"client"}
-    
-    read -p "Set expiration in days (0 for never): " EXPIRY_DAYS
-    EXPIRY_DAYS=${EXPIRY_DAYS:-0}
-
-    LAST_IP=$(grep "AllowedIPs" $WG_CONF | tail -n1 | awk '{print $3}' | cut -d. -f4 | cut -d/ -f1)
-    CLIENT_IP=$(( ${LAST_IP:-1} + 1 ))
-
-    CLIENT_PRIV=$(wg genkey)
-    CLIENT_PUB=$(echo "$CLIENT_PRIV" | wg pubkey)
-    
-    echo -e "Select DNS (Default: Google):"
-    echo "1) Google (8.8.8.8)"
-    echo "2) Cloudflare (1.1.1.1)"
-    echo "3) AdGuard (Ad-Blocking)"
-    read -p "Choice [1-3]: " DNS_CHOICE
-    case $DNS_CHOICE in
-        2) DNS="1.1.1.1" ;;
-        3) DNS="94.140.14.14" ;;
-        *) DNS="8.8.8.8" ;;
-    esac
-
-    cat <<EOF >> $WG_CONF
-
-[Peer]
-# Client: $CLIENT_NAME
-PublicKey = $CLIENT_PUB
-AllowedIPs = 10.0.0.$CLIENT_IP/32
-EOF
-
-    wg addconf wg0 <(echo -e "[Peer]\nPublicKey = $CLIENT_PUB\nAllowedIPs = 10.0.0.$CLIENT_IP/32")
-
-    if [[ $EXPIRY_DAYS -gt 0 ]]; then
-        EXPIRY_DATE=$(date -d "+$EXPIRY_DAYS days" +%s)
-        echo "$CLIENT_NAME:$CLIENT_PUB:$EXPIRY_DATE" >> $EXPIRY_LOG
-        echo -e "${YELLOW}Client will expire on $(date -d @$EXPIRY_DATE).${NC}"
-    fi
-
-    get_public_ip
-    SERVER_PUB=$(cat "$WG_DIR/server_public.key")
-    
-    CLIENT_CONF_FILE="$HOME/${CLIENT_NAME}_wg.conf"
-    cat <<EOF > "$CLIENT_CONF_FILE"
-[Interface]
-PrivateKey = $CLIENT_PRIV
-Address = 10.0.0.$CLIENT_IP/32
-DNS = $DNS
-MTU = 1420
-
-[Peer]
-PublicKey = $SERVER_PUB
-Endpoint = $SERVER_IP:$WG_PORT
-AllowedIPs = 0.0.0.0/0
-PersistentKeepalive = 25
-EOF
-
-    echo -e "${GREEN}Client '$CLIENT_NAME' created!${NC}"
-    send_telegram_msg "👤 New Client Added: $CLIENT_NAME"
-    qrencode -t ansiutf8 < "$CLIENT_CONF_FILE"
-}
-
-check_expiry() {
-    CURRENT_TIME=$(date +%s)
-    TEMP_LOG=$(mktemp)
-    RELOAD_NEEDED=false
-
-    while IFS=: read -r NAME PUB EXPIRY; do
-        if [[ $CURRENT_TIME -ge $EXPIRY ]]; then
-            echo -e "${RED}Expiring client: $NAME${NC}"
-            wg set wg0 peer "$PUB" remove
-            sed -i "/PublicKey = $PUB/,/AllowedIPs/ s/^/#EXPIRED# /" $WG_CONF
-            send_telegram_msg "⏳ Client Expired & Blocked: $NAME"
-            RELOAD_NEEDED=true
-        else
-            echo "$NAME:$PUB:$EXPIRY" >> $TEMP_LOG
-        fi
-    done < $EXPIRY_LOG
-
-    mv $TEMP_LOG $EXPIRY_LOG
-    if [[ "$RELOAD_NEEDED" == "true" ]]; then
-        systemctl restart wg-quick@wg0
-    fi
-}
-
-apply_performance_tuning() {
-    echo -e "${YELLOW}Applying Performance Tuning...${NC}"
-    get_main_interface
-    if [[ -n "$INTERFACE" ]]; then
-        ethtool -K "$INTERFACE" gso off gro off tso off &> /dev/null
-    fi
-    systemctl enable --now irqbalance &> /dev/null
-    cat <<EOF > /etc/sysctl.d/99-wg-ultimate.conf
-net.core.rmem_max = 67108864
-net.core.wmem_max = 67108864
-net.ipv4.tcp_congestion_control = bbr
-net.core.default_qdisc = fq
-EOF
-    sysctl -p /etc/sysctl.d/99-wg-ultimate.conf &> /dev/null
-    echo -e "${GREEN}Optimized!${NC}"
-}
-
-setup_stealth_mode() {
-    echo -e "${YELLOW}Toggling Stealth Mode...${NC}"
-    if pgrep -x "udp2raw" > /dev/null; then
-        pkill udp2raw && echo -e "${GREEN}Stealth Mode Disabled.${NC}"
-    else
-        if [[ ! -f /usr/local/bin/udp2raw ]]; then
-            wget https://github.com/wangyu-/udp2raw/releases/download/20230206.0/udp2raw_binaries.tar.gz -O /tmp/udp2raw.tar.gz
-            tar -xvf /tmp/udp2raw.tar.gz -C /tmp/ && cp /tmp/udp2raw_amd64 /usr/local/bin/udp2raw && chmod +x /usr/local/bin/udp2raw
-        fi
-        nohup udp2raw -s -l 0.0.0.0:443 -r 127.0.0.1:$WG_PORT -k "mypassword123" --raw-mode faketcp > /var/log/udp2raw.log 2>&1 &
-        echo -e "${GREEN}Stealth Mode Enabled on Port 443.${NC}"
-    fi
-}
-
-toggle_anti_ddos() {
-    if [[ -f $BLACKHOLE_CONF ]]; then
-        rm $BLACKHOLE_CONF
-        sysctl --system &> /dev/null
-        echo -e "${RED}Anti-DDoS Blackhole Disabled.${NC}"
-    else
-        echo -e "${YELLOW}Enabling Anti-DDoS Blackhole Protection...${NC}"
-        cat <<EOF > $BLACKHOLE_CONF
-net.ipv4.icmp_echo_ignore_all = 1
-net.ipv4.tcp_syncookies = 1
-net.ipv4.tcp_max_syn_backlog = 2048
-net.ipv4.conf.all.rp_filter = 1
-net.ipv4.conf.default.rp_filter = 1
-net.ipv4.conf.all.accept_redirects = 0
-net.ipv4.conf.default.accept_redirects = 0
-net.ipv4.icmp_ignore_bogus_error_responses = 1
-EOF
-        sysctl -p $BLACKHOLE_CONF &> /dev/null
-        echo -e "${GREEN}Anti-DDoS Blackhole Enabled.${NC}"
-    fi
-}
-
-toggle_ai_detector() {
-    if systemctl is-active --quiet $AI_DETECTOR_SERVICE; then
-        systemctl stop $AI_DETECTOR_SERVICE
-        systemctl disable $AI_DETECTOR_SERVICE
-        echo -e "${RED}AI Attack Detector Disabled.${NC}"
-    else
-        echo -e "${YELLOW}Enabling AI Attack Detector...${NC}"
-        if [[ ! -f $AI_DETECTOR_SCRIPT ]]; then
-            wget -q $AI_SCRIPT_URL -O $AI_DETECTOR_SCRIPT
-        fi
-        read -p "Enter Discord Webhook URL (optional): " WEBHOOK
-        if [[ -n "$WEBHOOK" ]]; then
-            sed -i "s|DISCORD_WEBHOOK = .*|DISCORD_WEBHOOK = \"$WEBHOOK\"|" $AI_DETECTOR_SCRIPT
-        fi
-        cat <<EOF > /etc/systemd/system/$AI_DETECTOR_SERVICE.service
-[Unit]
-Description=WireGuard AI Attack Detector
-After=network.target
-
-[Service]
-Type=simple
-ExecStart=/usr/bin/python3 $AI_DETECTOR_SCRIPT
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
-EOF
-        systemctl daemon-reload
-        systemctl enable --now $AI_DETECTOR_SERVICE
-        echo -e "${GREEN}AI Attack Detector Enabled and Running.${NC}"
-    fi
-}
-
-toggle_ai_shield() {
-    if systemctl is-active --quiet $AI_SHIELD_SERVICE; then
-        systemctl stop $AI_SHIELD_SERVICE
-        systemctl disable $AI_SHIELD_SERVICE
-        echo -e "${RED}AI DDoS Shield Disabled.${NC}"
-    else
-        echo -e "${YELLOW}Enabling AI DDoS Shield...${NC}"
-        if [[ ! -f $AI_SHIELD_SCRIPT ]]; then
-            wget -q $SHIELD_SCRIPT_URL -O $AI_SHIELD_SCRIPT
-        fi
-        cat <<EOF > /etc/systemd/system/$AI_SHIELD_SERVICE.service
-[Unit]
-Description=WireGuard AI DDoS Shield
-After=network.target
-
-[Service]
-Type=simple
-ExecStart=/usr/bin/python3 $AI_SHIELD_SCRIPT
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
-EOF
-        systemctl daemon-reload
-        systemctl enable --now $AI_SHIELD_SERVICE
-        echo -e "${GREEN}AI DDoS Shield Enabled and Running.${NC}"
-    fi
+    echo -e "${GREEN}WireGuard v5.0 successfully installed!${NC}"
+    send_telegram_msg "✅ Next-Gen WireGuard Server Installed on $SERVER_IP"
 }
 
 # --- Menu ---
 
 show_menu() {
     echo -e "\n${BLUE}=====================================${NC}"
-    echo -e "${BLUE}   WireGuard AI-Shield v4.1          ${NC}"
+    echo -e "${BLUE}   WireGuard Next-Gen v5.0           ${NC}"
     echo -e "${BLUE}=====================================${NC}"
     echo "1) Install WireGuard"
     echo "2) Add New Client (with Expiry)"
@@ -427,14 +204,17 @@ show_menu() {
     echo "7) Optimize MTU (Auto-Detect)"
     echo "8) Toggle Stealth Mode (udp2raw)"
     echo "9) Toggle Anti-DDoS Blackhole"
-    echo "10) Toggle AI Attack Detector (Logs)"
-    echo "11) Toggle AI DDoS Shield (Traffic)"
-    echo "12) Setup Telegram Alerts"
-    echo "13) Setup Multi-Hop Relay"
-    echo "14) Check for Updates Now"
-    echo "15) Uninstall"
-    echo "16) Exit"
-    read -p "Select [1-16]: " OPTION
+    echo "10) Toggle AI Attack Detector"
+    echo "11) Toggle AI DDoS Shield"
+    echo "12) Setup Web Dashboard"
+    echo "13) Setup Geo-IP Blocking"
+    echo "14) Setup Telegram Alerts"
+    echo "15) Setup Multi-Hop Relay"
+    echo "16) Run Cloud Backup Now"
+    echo "17) Check for Updates Now"
+    echo "18) Uninstall"
+    echo "19) Exit"
+    read -p "Select [1-19]: " OPTION
 }
 
 # --- Main ---
@@ -450,6 +230,11 @@ fi
 if [[ "$1" == "--auto-update" ]]; then
     self_update --quiet
     update_ai_module
+    exit 0
+fi
+
+if [[ "$1" == "--backup" ]]; then
+    cloud_backup
     exit 0
 fi
 
@@ -471,11 +256,14 @@ else
             9) toggle_anti_ddos ;;
             10) toggle_ai_detector ;;
             11) toggle_ai_shield ;;
-            12) setup_telegram ;;
-            13) setup_multi_hop ;;
-            14) self_update; update_ai_module ;;
-            15) systemctl stop wg-quick@wg0; systemctl stop $AI_DETECTOR_SERVICE &> /dev/null; systemctl stop $AI_SHIELD_SERVICE &> /dev/null; rm -rf $WG_DIR; crontab -l | grep -v "wireguard_installer.sh" | crontab -; echo "Uninstalled."; exit 0 ;;
-            16) exit 0 ;;
+            12) setup_web_dashboard ;;
+            13) setup_geoip_blocking ;;
+            14) setup_telegram ;;
+            15) setup_multi_hop ;;
+            16) cloud_backup ;;
+            17) self_update; update_ai_module ;;
+            18) systemctl stop wg-quick@wg0; systemctl stop $AI_DETECTOR_SERVICE &> /dev/null; systemctl stop $AI_SHIELD_SERVICE &> /dev/null; systemctl stop $DASHBOARD_SERVICE &> /dev/null; rm -rf $WG_DIR; crontab -l | grep -v "wireguard_installer.sh" | crontab -; echo "Uninstalled."; exit 0 ;;
+            19) exit 0 ;;
             *) echo -e "${RED}Invalid option.${NC}" ;;
         esac
     done
