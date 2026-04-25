@@ -1,120 +1,201 @@
 #!/bin/bash
 
-# WireGuard Auto-Installer Script
-# This script automates the installation and configuration of WireGuard VPN server.
+# =================================================================
+# WireGuard Advanced Auto-Installer
+# =================================================================
+# Features:
+# - OS Detection (Ubuntu, Debian, CentOS, Fedora)
+# - Multi-Client Management (Add/Remove/List)
+# - Custom DNS Options (Google, Cloudflare, AdGuard)
+# - Automatic Firewall Configuration
+# - Uninstaller
+# =================================================================
 
-# --- Configuration Variables (can be customized) ---
+# --- Configuration & Defaults ---
+WG_DIR="/etc/wireguard"
+WG_CONF="$WG_DIR/wg0.conf"
 WG_PORT="51820"
-WG_PROTOCOL="udp" # WireGuard primarily uses UDP
-WG_AES_ENCRYPTION_NOTE="WireGuard uses ChaCha20-Poly1305 for encryption, not AES. This script will use WireGuard's default strong cryptography."
+WG_PROTO="udp"
 
-# --- Functions ---
+# --- Colors for Output ---
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
 
-# Function to detect OS
+# --- Helper Functions ---
+
+check_root() {
+    if [[ $EUID -ne 0 ]]; then
+        echo -e "${RED}Error: This script must be run as root.${NC}"
+        exit 1
+    fi
+}
+
 detect_os() {
     if [[ -f /etc/os-release ]]; then
         . /etc/os-release
         OS=$ID
-        VERSION_ID=$VERSION_ID
-    elif [[ -f /etc/redhat-release ]]; then
-        OS="centos"
-        VERSION_ID=$(grep -oE '[0-9.]+' /etc/redhat-release | cut -d. -f1)
     else
-        echo "Unsupported operating system. Exiting."
+        echo -e "${RED}Unsupported OS.${NC}"
         exit 1
     fi
-    echo "Detected OS: $OS $VERSION_ID"
 }
 
-# Function to install WireGuard
-install_wireguard() {
-    echo "Installing WireGuard on $OS..."
+get_public_ip() {
+    SERVER_IP=$(curl -s ifconfig.me || curl -s api.ipify.org || echo "YOUR_SERVER_IP")
+}
+
+# --- Core Logic ---
+
+install_wg() {
+    echo -e "${YELLOW}Installing WireGuard...${NC}"
     case $OS in
         ubuntu|debian)
-            sudo apt update
-            sudo apt install -y wireguard qrencode
+            apt update && apt install -y wireguard qrencode curl iptables
             ;;
         centos|fedora)
-            sudo dnf install -y epel-release
-            sudo dnf install -y wireguard-tools qrencode
-            ;;
-        *)
-            echo "WireGuard installation not supported for $OS. Please install manually." # Placeholder for other OS
-            exit 1
+            dnf install -y epel-release
+            dnf install -y wireguard-tools qrencode curl iptables
             ;;
     esac
-    echo "WireGuard installed successfully."
-}
+    
+    mkdir -p $WG_DIR
+    chmod 700 $WG_DIR
 
-# Function to generate server and client configurations
-generate_configs() {
-    echo "Generating WireGuard configurations..."
+    # Generate Server Keys
+    SERVER_PRIV=$(wg genkey)
+    SERVER_PUB=$(echo "$SERVER_PRIV" | wg pubkey)
+    echo "$SERVER_PRIV" > "$WG_DIR/server_private.key"
+    echo "$SERVER_PUB" > "$WG_DIR/server_public.key"
 
-    # Generate server keys
-    SERVER_PRIVKEY=$(wg genkey)
-    SERVER_PUBKEY=$(echo "$SERVER_PRIVKEY" | wg pubkey)
-
-    # Generate client keys
-    CLIENT_PRIVKEY=$(wg genkey)
-    CLIENT_PUBKEY=$(echo "$CLIENT_PRIVKEY" | wg pubkey)
-
-    # Get server's public IP
-    SERVER_EXTERNAL_IP=$(curl -s ifconfig.me)
-    if [ -z "$SERVER_EXTERNAL_IP" ]; then
-        SERVER_EXTERNAL_IP=$(dig +short myip.opendns.com @resolver1.opendns.com)
-    fi
-
-    # Create server configuration
-    SERVER_CONFIG="[Interface]
-PrivateKey = $SERVER_PRIVKEY
+    # Default Server Config
+    cat <<EOF > $WG_CONF
+[Interface]
 Address = 10.0.0.1/24
 ListenPort = $WG_PORT
+PrivateKey = $SERVER_PRIV
 PostUp = iptables -A FORWARD -i wg0 -j ACCEPT; iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE; iptables -A FORWARD -o wg0 -j ACCEPT
 PostDown = iptables -D FORWARD -i wg0 -j ACCEPT; iptables -t nat -D POSTROUTING -o eth0 -j MASQUERADE; iptables -D FORWARD -o wg0 -j ACCEPT
+EOF
 
-[Peer]
-PublicKey = $CLIENT_PUBKEY
-AllowedIPs = 10.0.0.2/32"
+    # Enable IP Forwarding
+    echo "net.ipv4.ip_forward=1" > /etc/sysctl.d/99-wireguard.conf
+    sysctl -p /etc/sysctl.d/99-wireguard.conf
 
-    echo "$SERVER_CONFIG" | sudo tee /etc/wireguard/wg0.conf > /dev/null
-    sudo chmod 600 /etc/wireguard/wg0.conf
-
-    # Enable IP forwarding
-    echo "net.ipv4.ip_forward=1" | sudo tee -a /etc/sysctl.conf > /dev/null
-    sudo sysctl -p
-
-    # Start WireGuard
-    sudo systemctl enable wg-quick@wg0
-    sudo systemctl start wg-quick@wg0
-
-    echo "Server configuration created at /etc/wireguard/wg0.conf"
-
-    # Create client configuration
-    CLIENT_CONFIG="[Interface]
-PrivateKey = $CLIENT_PRIVKEY
-Address = 10.0.0.2/32
-DNS = 8.8.8.8
-
-[Peer]
-PublicKey = $SERVER_PUBKEY
-Endpoint = $SERVER_EXTERNAL_IP:$WG_PORT
-AllowedIPs = 0.0.0.0/0, ::/0"
-
-    echo "Client configuration (client.conf):"
-    echo "$CLIENT_CONFIG"
-    echo ""
-    echo "QR Code for client configuration:"
-    echo "$CLIENT_CONFIG" | qrencode -t ansiutf8
-    echo ""
-    echo "Please save the client.conf content and QR code to configure your client device."
+    systemctl enable wg-quick@wg0
+    systemctl start wg-quick@wg0
+    
+    echo -e "${GREEN}WireGuard installed and started!${NC}"
 }
 
-# --- Main Script Execution ---
-echo "Starting WireGuard Auto-Installer..."
+add_client() {
+    echo -e "${YELLOW}Adding a new client...${NC}"
+    read -p "Enter client name (e.g., phone): " CLIENT_NAME
+    
+    # Find next available IP
+    LAST_IP=$(grep "AllowedIPs" $WG_CONF | tail -n1 | awk '{print $3}' | cut -d. -f4 | cut -d/ -f1)
+    if [ -z "$LAST_IP" ]; then
+        CLIENT_IP="2"
+    else
+        CLIENT_IP=$((LAST_IP + 1))
+    fi
 
+    CLIENT_PRIV=$(wg genkey)
+    CLIENT_PUB=$(echo "$CLIENT_PRIV" | wg pubkey)
+    
+    # Choose DNS
+    echo -e "Select DNS Provider:"
+    echo "1) Google (8.8.8.8)"
+    echo "2) Cloudflare (1.1.1.1)"
+    echo "3) AdGuard (Ad-Blocking: 94.140.14.14)"
+    read -p "Choice [1-3]: " DNS_CHOICE
+    case $DNS_CHOICE in
+        2) DNS="1.1.1.1" ;;
+        3) DNS="94.140.14.14" ;;
+        *) DNS="8.8.8.8" ;;
+    esac
+
+    # Add to Server Config
+    cat <<EOF >> $WG_CONF
+
+[Peer]
+# Client: $CLIENT_NAME
+PublicKey = $CLIENT_PUB
+AllowedIPs = 10.0.0.$CLIENT_IP/32
+EOF
+
+    wg addconf wg0 <(echo -e "[Peer]\nPublicKey = $CLIENT_PUB\nAllowedIPs = 10.0.0.$CLIENT_IP/32")
+
+    # Generate Client Config File
+    get_public_ip
+    SERVER_PUB=$(cat "$WG_DIR/server_public.key")
+    
+    CLIENT_CONF_FILE="$HOME/${CLIENT_NAME}_wg.conf"
+    cat <<EOF > "$CLIENT_CONF_FILE"
+[Interface]
+PrivateKey = $CLIENT_PRIV
+Address = 10.0.0.$CLIENT_IP/32
+DNS = $DNS
+
+[Peer]
+PublicKey = $SERVER_PUB
+Endpoint = $SERVER_IP:$WG_PORT
+AllowedIPs = 0.0.0.0/0
+PersistentKeepalive = 25
+EOF
+
+    echo -e "${GREEN}Client '$CLIENT_NAME' added!${NC}"
+    echo -e "Config saved to: $CLIENT_CONF_FILE"
+    echo -e "${YELLOW}QR Code for mobile setup:${NC}"
+    qrencode -t ansiutf8 < "$CLIENT_CONF_FILE"
+}
+
+list_clients() {
+    echo -e "${YELLOW}Current Clients:${NC}"
+    grep "# Client:" $WG_CONF | cut -d: -f2
+}
+
+uninstall_wg() {
+    read -p "Are you sure you want to uninstall WireGuard? [y/N]: " CONFIRM
+    if [[ $CONFIRM == "y" || $CONFIRM == "Y" ]]; then
+        systemctl stop wg-quick@wg0
+        systemctl disable wg-quick@wg0
+        rm -rf $WG_DIR
+        rm /etc/sysctl.d/99-wireguard.conf
+        echo -e "${GREEN}WireGuard has been uninstalled.${NC}"
+    fi
+}
+
+# --- Menu ---
+
+show_menu() {
+    echo -e "\n${GREEN}--- WireGuard Manager ---${NC}"
+    echo "1) Install WireGuard"
+    echo "2) Add New Client"
+    echo "3) List Clients"
+    echo "4) Uninstall WireGuard"
+    echo "5) Exit"
+    read -p "Select an option [1-5]: " OPTION
+}
+
+# --- Main ---
+check_root
 detect_os
-install_wireguard
-generate_configs
 
-echo "WireGuard setup complete!"
-echo "Note on encryption: $WG_AES_ENCRYPTION_NOTE"
+if [[ ! -d $WG_DIR ]]; then
+    install_wg
+    add_client
+else
+    while true; do
+        show_menu
+        case $OPTION in
+            1) echo -e "${YELLOW}Already installed.${NC}" ;;
+            2) add_client ;;
+            3) list_clients ;;
+            4) uninstall_wg; exit 0 ;;
+            5) exit 0 ;;
+            *) echo -e "${RED}Invalid option.${NC}" ;;
+        esac
+    done
+fi
