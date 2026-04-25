@@ -1,10 +1,10 @@
-# 🚀 WireGuard Zero-Config Auto-Installer (v8.1) - AI ASSISTANT
+# 🚀 WireGuard Zero-Config Auto-Installer (v8.2) - STABLE EDITION
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Bash](https://img.shields.io/badge/Language-Bash-4EAA25.svg)](https://www.gnu.org/software/bash/)
 [![WireGuard](https://img.shields.io/badge/VPN-WireGuard-88171A.svg)](https://www.wireguard.com/)
 
-The ultimate "Zero-Config" WireGuard deployment suite. Version 8.1 introduces the **Integrated AI Assistant**, allowing users to ask questions, get help, and troubleshoot their VPN directly from the terminal.
+The ultimate "Zero-Config" WireGuard deployment suite. Version 8.2 introduces the **Stable Edition**, featuring fully implemented core logic, robust error handling, and a production-ready AI Assistant.
 
 ---
 
@@ -35,9 +35,9 @@ wget https://raw.githubusercontent.com/happyhitzz/wireguard-auto-installer/main/
 
 ---
 
-## 🎮 Management Menu (v8.1)
+## 🎮 Management Menu (v8.2)
 
-The AI Assistant Edition menu now features **39 powerful options**:
+The Stable Edition menu now features **39 powerful options** with fully functional core logic:
 
 0. **ASK AI ASSISTANT:** Get instant help and info.
 1. **Install WireGuard:** Fully automated setup.
@@ -81,12 +81,12 @@ The AI Assistant Edition menu now features **39 powerful options**:
 
 ---
 
-## 🤖 AI Assistant Capabilities
+## 🛠️ Stable Edition Improvements
 
-*   **Instant Help:** Get explanations for any feature (MTU, Stealth Mode, etc.) without leaving the terminal.
-*   **Troubleshooting:** Ask the AI for help if you're experiencing connectivity or performance issues.
-*   **Feature Discovery:** Learn about the advanced Quantum and Enterprise features included in the suite.
-*   **Interactive Learning:** A conversational way to master your VPN infrastructure.
+*   **Robust Core Logic:** Fully implemented installation and client management functions.
+*   **Error Handling:** Added checks for root privileges, OS compatibility, and existing configurations.
+*   **Zero-Config Automation:** Improved automatic detection of public IP and network interfaces.
+*   **Production-Ready AI:** Enhanced the AI Assistant with better response logic and automatic script downloading.
 
 ---
 

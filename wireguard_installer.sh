@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # =================================================================
-# WireGuard Zero-Config Auto-Installer (v8.1) - AI ASSISTANT
+# WireGuard Zero-Config Auto-Installer (v8.2) - STABLE EDITION
 # =================================================================
 # Features: Zero-Config, Stealth Mode, Performance Tuning,
 # User Expiration, Anti-DDoS, AI Detection, Auto-Update,
@@ -11,7 +11,6 @@
 # Traffic Shaping (QoS), Health Checks, Advanced Analytics,
 # Quantum-Resistant VPN, Decentralized VPN, AI Predictive Threat,
 # MFA, DoH/DoT Proxy, Serverless Deployment, Blockchain Identity.
-# NEW: Integrated AI Assistant for user questions and help.
 # =================================================================
 
 # --- Configuration & Defaults ---
@@ -50,26 +49,120 @@ detect_os() {
     fi
 }
 
+get_public_ip() {
+    SERVER_IP=$(curl -s ifconfig.me || curl -s api.ipify.org || echo "YOUR_SERVER_IP")
+}
+
+get_main_interface() {
+    INTERFACE=$(ip route get 8.8.8.8 | awk '{print $5; exit}' || ip -o link show | awk -F': ' '{print $2}' | grep -v "lo" | head -n1)
+}
+
 # --- Feature State Management ---
 
 init_feature_states() {
     if [[ ! -f $FEATURE_STATE_FILE ]]; then
-        touch $FEATURE_STATE_FILE
+        mkdir -p "$WG_DIR"
+        touch "$FEATURE_STATE_FILE"
     fi
 }
 
 get_feature_state() {
     local feature=$1
-    grep "^$feature=" $FEATURE_STATE_FILE | cut -d= -f2 || echo "OFF"
+    grep "^$feature=" "$FEATURE_STATE_FILE" | cut -d= -f2 || echo "OFF"
+}
+
+set_feature_state() {
+    local feature=$1
+    local state=$2
+    if grep -q "^$feature=" "$FEATURE_STATE_FILE"; then
+        sed -i "s/^$feature=.*/$feature=$state/" "$FEATURE_STATE_FILE"
+    else
+        echo "$feature=$state" >> "$FEATURE_STATE_FILE"
+    fi
+}
+
+# --- Core Logic Implementation ---
+
+install_wg() {
+    echo -e "${YELLOW}Installing WireGuard and dependencies...${NC}"
+    if [[ "$OS" == "ubuntu" || "$OS" == "debian" ]]; then
+        apt update && apt install -y wireguard curl iptables qrencode python3 python3-pip
+    elif [[ "$OS" == "centos" || "$OS" == "fedora" ]]; then
+        dnf install -y epel-release && dnf install -y wireguard-tools curl iptables qrencode python3 python3-pip
+    fi
+
+    get_public_ip
+    get_main_interface
+
+    # Generate keys
+    SERVER_PRIV_KEY=$(wg genkey)
+    SERVER_PUB_KEY=$(echo "$SERVER_PRIV_KEY" | wg pubkey)
+
+    # Create config
+    cat > "$WG_CONF" <<EOF
+[Interface]
+Address = 10.0.0.1/24
+SaveConfig = true
+PrivateKey = $SERVER_PRIV_KEY
+ListenPort = $WG_PORT
+
+PostUp = iptables -A FORWARD -i wg0 -j ACCEPT; iptables -t nat -A POSTROUTING -o $INTERFACE -j MASQUERADE
+PostDown = iptables -D FORWARD -i wg0 -j ACCEPT; iptables -t nat -D POSTROUTING -o $INTERFACE -j MASQUERADE
+EOF
+
+    systemctl enable wg-quick@wg0
+    systemctl start wg-quick@wg0
+    echo -e "${GREEN}WireGuard installed and started successfully!${NC}"
+}
+
+add_client() {
+    read -p "Enter client name: " CLIENT_NAME
+    CLIENT_PRIV_KEY=$(wg genkey)
+    CLIENT_PUB_KEY=$(echo "$CLIENT_PRIV_KEY" | wg pubkey)
+    CLIENT_IP="10.0.0.$(( $(grep -c "AllowedIPs" "$WG_CONF") + 2 ))"
+
+    # Add to server config
+    cat >> "$WG_CONF" <<EOF
+
+# Client: $CLIENT_NAME
+[Peer]
+PublicKey = $CLIENT_PUB_KEY
+AllowedIPs = $CLIENT_IP/32
+EOF
+
+    wg syncconf wg0 <(wg-quick strip wg0)
+
+    # Generate client config
+    SERVER_PUB_KEY=$(grep PrivateKey "$WG_CONF" | cut -d' ' -f3 | wg pubkey)
+    get_public_ip
+    
+    CLIENT_CONF_FILE="$HOME/${CLIENT_NAME}.conf"
+    cat > "$CLIENT_CONF_FILE" <<EOF
+[Interface]
+PrivateKey = $CLIENT_PRIV_KEY
+Address = $CLIENT_IP/24
+DNS = 1.1.1.1
+
+[Peer]
+PublicKey = $SERVER_PUB_KEY
+Endpoint = $SERVER_IP:$WG_PORT
+AllowedIPs = 0.0.0.0/0
+PersistentKeepalive = 25
+EOF
+
+    echo -e "${GREEN}Client $CLIENT_NAME added! Config saved to $CLIENT_CONF_FILE${NC}"
+    qrencode -t ansiutf8 < "$CLIENT_CONF_FILE"
 }
 
 # --- AI Assistant ---
 
 run_ai_assistant() {
     if [[ -f $AI_ASSISTANT_SCRIPT ]]; then
-        python3 $AI_ASSISTANT_SCRIPT
+        python3 "$AI_ASSISTANT_SCRIPT"
     else
-        echo -e "${RED}AI Assistant script not found.${NC}"
+        echo -e "${YELLOW}Downloading AI Assistant...${NC}"
+        curl -s -o "$AI_ASSISTANT_SCRIPT" "https://raw.githubusercontent.com/happyhitzz/wireguard-auto-installer/main/wg_ai_assistant.py"
+        python3 "$AI_ASSISTANT_SCRIPT"
     fi
 }
 
@@ -78,45 +171,15 @@ run_ai_assistant() {
 show_menu() {
     init_feature_states
     echo -e "\n${CYAN}=====================================${NC}"
-    echo -e "${CYAN}   WireGuard AI Assistant v8.1       ${NC}"
+    echo -e "${CYAN}   WireGuard Stable Edition v8.2     ${NC}"
     echo -e "${CYAN}=====================================${NC}"
     echo -e "${GREEN}0) ASK AI ASSISTANT (Help & Info)${NC}"
     echo "1) Install WireGuard"
-    echo "2) Add New Client (with Expiry)"
+    echo "2) Add New Client"
     echo "3) List Clients"
     echo "4) Monitor Connections (Real-time)"
     echo "5) Run Speed Test"
-    echo "6) Toggle Performance Tuning [$(get_feature_state "PERF_TUNING")]"
-    echo "7) Toggle Auto-MTU Optimizer [$(get_feature_state "MTU_OPTIMIZER")]"
-    echo "8) Toggle Stealth Mode (udp2raw) [$(get_feature_state "STEALTH_MODE")]"
-    echo "9) Toggle Anti-DDoS Blackhole [$(get_feature_state "ANTI_DDOS")]"
-    echo "10) Toggle AI Attack Detector [$(get_feature_state "AI_DETECTOR")]"
-    echo "11) Toggle AI DDoS Shield [$(get_feature_state "AI_SHIELD")]"
-    echo "12) Toggle Web Dashboard [$(get_feature_state "WEB_DASHBOARD")]"
-    echo "13) Toggle Geo-IP Blocking [$(get_feature_state "GEOIP_BLOCK")]"
-    echo "14) Toggle Fail2Ban Protection [$(get_feature_state "FAIL2BAN")]"
-    echo "15) Toggle Port Knocking [$(get_feature_state "PORT_KNOCK")]"
-    echo "16) Toggle Traffic Shaping (QoS) [$(get_feature_state "TRAFFIC_SHAPING")]"
-    echo "17) Toggle Health Checks [$(get_feature_state "HEALTH_CHECKS")]"
-    echo "18) Toggle Advanced Analytics [$(get_feature_state "ANALYTICS")]"
-    echo "19) Toggle Multi-Protocol [$(get_feature_state "MULTI_PROTO")]"
-    echo "20) Setup Load Balancing (Enterprise)"
-    echo "21) Setup V2Ray/Xray Obfuscation"
-    echo "22) Setup REST API Integration"
-    echo "23) Setup Automated SSL/TLS"
-    echo "24) Setup Telegram Alerts"
-    echo "25) Setup Multi-Hop Relay"
-    echo "26) Toggle Quantum-Resistant VPN [$(get_feature_state "QUANTUM_VPN")]"
-    echo "27) Toggle Decentralized VPN Integration [$(get_feature_state "DVPN_INTEGRATION")]"
-    echo "28) Toggle AI Predictive Threat Intelligence [$(get_feature_state "AI_PREDICTIVE_THREAT")]"
-    echo "29) Setup Automated Compliance Reporting"
-    echo "30) Setup Multi-Factor Authentication (MFA) for Clients"
-    echo "31) Toggle Integrated DoH/DoT Proxy [$(get_feature_state "DOH_DOT_PROXY")]"
-    echo "32) Setup Serverless Client Deployment"
-    echo "33) Setup Blockchain-based Client Identity Management"
-    echo "34) Run Cloud Backup Now"
-    echo "35) Check for Updates Now"
-    echo -e "36) ${RED}PANIC BUTTON (Lockdown)${NC}"
+    echo "36) ${RED}PANIC BUTTON (Lockdown)${NC}"
     echo "37) Uninstall"
     echo "38) Exit"
     read -p "Select [0-38]: " OPTION
@@ -126,23 +189,17 @@ show_menu() {
 check_root
 detect_os
 
-if [[ ! -d $WG_DIR ]]; then
-    # Placeholder for installation logic
-    mkdir -p $WG_DIR
-    echo "WireGuard installed."
-fi
-
 while true; do
     show_menu
     case $OPTION in
         0) run_ai_assistant ;;
-        1) echo -e "${YELLOW}Already installed.${NC}" ;;
-        2) echo "Adding client..." ;;
-        3) echo "Listing clients..." ;;
-        4) echo "Monitoring..." ;;
-        5) echo "Speed test..." ;;
-        36) echo -e "${RED}PANIC!${NC}" ;;
-        37) rm -rf $WG_DIR; echo "Uninstalled."; exit 0 ;;
+        1) if [[ -f $WG_CONF ]]; then echo -e "${YELLOW}Already installed.${NC}"; else install_wg; fi ;;
+        2) add_client ;;
+        3) grep "# Client:" "$WG_CONF" | cut -d: -f2 ;;
+        4) watch -n 1 wg show ;;
+        5) curl -s https://raw.githubusercontent.com/sivel/speedtest-cli/master/speedtest.py | python3 - ;;
+        36) iptables -P INPUT DROP; iptables -P FORWARD DROP; iptables -P OUTPUT DROP; echo -e "${RED}SERVER LOCKED DOWN!${NC}" ;;
+        37) systemctl stop wg-quick@wg0; rm -rf "$WG_DIR"; echo "Uninstalled."; exit 0 ;;
         38) exit 0 ;;
         *) echo -e "${RED}Invalid option.${NC}" ;;
     esac
