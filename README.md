@@ -1,10 +1,10 @@
-# 🚀 WireGuard Zero-Config Auto-Installer (v8.0) - QUANTUM EDITION
+# 🚀 WireGuard Zero-Config Auto-Installer (v8.1) - AI ASSISTANT
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Bash](https://img.shields.io/badge/Language-Bash-4EAA25.svg)](https://www.gnu.org/software/bash/)
 [![WireGuard](https://img.shields.io/badge/VPN-WireGuard-88171A.svg)](https://www.wireguard.com/)
 
-The ultimate "Zero-Config" WireGuard deployment suite. Version 8.0 introduces the **Quantum Edition**, featuring Quantum-Resistant VPN, Decentralized VPN Integration, AI-Powered Predictive Threat Intelligence, and Blockchain Identity Management.
+The ultimate "Zero-Config" WireGuard deployment suite. Version 8.1 introduces the **Integrated AI Assistant**, allowing users to ask questions, get help, and troubleshoot their VPN directly from the terminal.
 
 ---
 
@@ -12,19 +12,16 @@ The ultimate "Zero-Config" WireGuard deployment suite. Version 8.0 introduces th
 
 | Feature | Description |
 | :--- | :--- |
+| 🤖 **AI Assistant** | Ask questions and get instant help directly from the management menu. |
 | ⚛️ **Quantum-Resistant VPN** | Future-proof your VPN against quantum computing attacks. |
 | 🌐 **Decentralized VPN (dVPN)** | Integrate with dVPN networks for enhanced privacy and censorship resistance. |
 | 🧠 **AI Predictive Threat** | Proactive AI-driven intelligence to anticipate and neutralize threats. |
 | ⛓️ **Blockchain Identity** | Secure and decentralized client identity management. |
 | 🔒 **MFA for Clients** | Multi-Factor Authentication for an extra layer of client security. |
 | 📡 **DoH/DoT Proxy** | Integrated DNS-over-HTTPS/TLS for enhanced DNS privacy. |
-| 🚀 **Serverless Deployment** | Simplify client configuration and distribution with serverless methods. |
-| 📈 **Automated Compliance** | Generate reports for regulatory and security compliance. |
 | 🔄 **Full Toggle Support** | Every feature can be turned ON or OFF with one click from the menu. |
 | ⚖️ **Load Balancing** | High-availability support with **HAProxy** for multi-cloud deployments. |
 | 🕵️ **V2Ray/Xray** | Next-gen traffic obfuscation to bypass the most advanced DPI firewalls. |
-| 🔌 **REST API** | Full-scale API for external integrations and automated user management. |
-| 🛡️ **AI Security Suite** | AI-driven DDoS protection and log-based attack detection. |
 
 ---
 
@@ -38,10 +35,11 @@ wget https://raw.githubusercontent.com/happyhitzz/wireguard-auto-installer/main/
 
 ---
 
-## 🎮 Management Menu (v8.0)
+## 🎮 Management Menu (v8.1)
 
-The Quantum Edition menu now features **38 powerful options** for total control:
+The AI Assistant Edition menu now features **39 powerful options**:
 
+0. **ASK AI ASSISTANT:** Get instant help and info.
 1. **Install WireGuard:** Fully automated setup.
 2. **Add New Client:** Create peers with optional **Expiration Days**.
 3. **List Clients:** See who is currently configured.
@@ -83,12 +81,12 @@ The Quantum Edition menu now features **38 powerful options** for total control:
 
 ---
 
-## ⚛️ Quantum Edition Capabilities
+## 🤖 AI Assistant Capabilities
 
-*   **Future-Proof Security:** Quantum-Resistant VPN ensures your data remains secure against the advent of quantum computers.
-*   **Ultimate Privacy:** Decentralized VPN integration and Blockchain Identity Management provide unparalleled anonymity and censorship resistance.
-*   **Proactive Defense:** AI-Powered Predictive Threat Intelligence anticipates attacks before they happen, keeping your network one step ahead.
-*   **Enterprise-Grade Compliance:** Automated Compliance Reporting and Multi-Factor Authentication meet the strictest regulatory and security requirements.
+*   **Instant Help:** Get explanations for any feature (MTU, Stealth Mode, etc.) without leaving the terminal.
+*   **Troubleshooting:** Ask the AI for help if you're experiencing connectivity or performance issues.
+*   **Feature Discovery:** Learn about the advanced Quantum and Enterprise features included in the suite.
+*   **Interactive Learning:** A conversational way to master your VPN infrastructure.
 
 ---
 
