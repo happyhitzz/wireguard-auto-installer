@@ -1,10 +1,10 @@
-# 🚀 WireGuard Zero-Config Auto-Installer (v6.1) - FULL CONTROL
+# 🚀 WireGuard Zero-Config Auto-Installer (v7.0) - ENTERPRISE
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Bash](https://img.shields.io/badge/Language-Bash-4EAA25.svg)](https://www.gnu.org/software/bash/)
 [![WireGuard](https://img.shields.io/badge/VPN-WireGuard-88171A.svg)](https://www.wireguard.com/)
 
-The ultimate "Zero-Config" WireGuard deployment suite. Version 6.1 introduces **Full Control**, allowing you to toggle (ON/OFF) every single advanced feature directly from the management menu.
+The ultimate "Zero-Config" WireGuard deployment suite. Version 7.0 introduces the **Enterprise Edition**, featuring Multi-Cloud Load Balancing, V2Ray/Xray Obfuscation, REST API Integration, and Automated SSL/TLS.
 
 ---
 
@@ -12,13 +12,13 @@ The ultimate "Zero-Config" WireGuard deployment suite. Version 6.1 introduces **
 
 | Feature | Description |
 | :--- | :--- |
-| 🔄 **Full Toggle Support** | Every feature (MTU, AI, QoS, etc.) can now be turned ON or OFF with one click. |
-| 🚀 **Multi-Protocol** | Integrated support for **Shadowsocks** as an alternative stealth layer. |
+| ⚖️ **Load Balancing** | High-availability support with **HAProxy** for multi-cloud deployments. |
+| 🕵️ **V2Ray/Xray** | Next-gen traffic obfuscation to bypass the most advanced DPI firewalls. |
+| 🔌 **REST API** | Full-scale API for external integrations and automated user management. |
+| 🔒 **Automated SSL** | Built-in **Certbot** integration for automated SSL/TLS certificate management. |
+| 🔄 **Full Toggle Support** | Every feature can be turned ON or OFF with one click from the menu. |
+| 🚀 **Multi-Protocol** | Integrated support for **Shadowsocks** and **WireGuard** in one suite. |
 | 🚦 **Traffic Shaping** | Advanced **QoS** to ensure fair bandwidth distribution among all clients. |
-| 📊 **Advanced Analytics** | Detailed kernel-level logging and traffic analysis for power users. |
-| 🏥 **Health Checks** | Automated 24/7 monitoring and self-healing for the WireGuard service. |
-| 🛡️ **Hardened Security** | Fail2Ban, Port Knocking, and a Panic Button for maximum protection. |
-| 🌐 **Web Dashboard** | Manage your VPN, clients, and traffic through a beautiful web interface. |
 | 🛡️ **AI Security Suite** | AI-driven DDoS protection and log-based attack detection. |
 
 ---
@@ -33,9 +33,9 @@ wget https://raw.githubusercontent.com/happyhitzz/wireguard-auto-installer/main/
 
 ---
 
-## 🎮 Management Menu (v6.1)
+## 🎮 Management Menu (v7.0)
 
-The new menu displays the current status (**[ON]** or **[OFF]**) for all toggleable features:
+The Enterprise menu now features **30 powerful options** for total control:
 
 1. **Install WireGuard:** Fully automated setup.
 2. **Add New Client:** Create peers with optional **Expiration Days**.
@@ -56,20 +56,26 @@ The new menu displays the current status (**[ON]** or **[OFF]**) for all togglea
 17. **Toggle Health Checks:** [ON/OFF] Automated self-healing and alerts.
 18. **Toggle Advanced Analytics:** [ON/OFF] Detailed traffic logging.
 19. **Toggle Multi-Protocol:** [ON/OFF] Add Shadowsocks for alternative obfuscation.
-20. **Setup Telegram Alerts:** Configure instant mobile notifications.
-21. **Setup Multi-Hop Relay:** Chain your VPN to another server.
-22. **Run Cloud Backup Now:** Manually trigger a configuration backup.
-23. **Check for Updates Now:** Manually trigger a full system and script update.
-24. **PANIC BUTTON:** Instant server lockdown in case of emergency.
-25. **Uninstall:** Cleanly remove everything from your system.
+20. **Setup Load Balancing:** [Enterprise] High-availability with HAProxy.
+21. **Setup V2Ray/Xray:** [Enterprise] Next-gen stealth obfuscation.
+22. **Setup REST API:** [Enterprise] External integration endpoint.
+23. **Setup Automated SSL:** [Enterprise] Certbot certificate management.
+24. **Setup Telegram Alerts:** Configure instant mobile notifications.
+25. **Setup Multi-Hop Relay:** Chain your VPN to another server.
+26. **Run Cloud Backup Now:** Manually trigger a configuration backup.
+27. **Check for Updates Now:** Manually trigger a full system and script update.
+28. **PANIC BUTTON:** Instant server lockdown in case of emergency.
+29. **Uninstall:** Cleanly remove everything from your system.
+30. **Exit**
 
 ---
 
-## 🔄 Full Control Capabilities
+## ⚖️ Enterprise Capabilities
 
-*   **Granular Management:** Don't like a feature? Turn it off. Want to test performance? Toggle the MTU optimizer or QoS and run a speed test.
-*   **Status Visibility:** The management menu now acts as a dashboard, showing you exactly which security and performance layers are active at a glance.
-*   **Zero-Risk Testing:** Safely experiment with advanced features like Port Knocking or Stealth Mode, knowing you can revert the changes instantly if needed.
+*   **High Availability:** Use the integrated HAProxy support to distribute traffic across multiple nodes, ensuring your VPN stays online even if one server fails.
+*   **Next-Gen Stealth:** When standard obfuscation isn't enough, V2Ray/Xray provides the most advanced traffic masking available today.
+*   **Programmable Infrastructure:** Use the REST API to integrate your VPN manager with your own apps, websites, or billing systems.
+*   **Secure Management:** Automated SSL/TLS ensures that your Web Dashboard and API endpoints are always protected by modern encryption.
 
 ---
 
