@@ -84,6 +84,8 @@ Once installed, running the script again will open the **WireGuard Manager**:
 *   [**NFOservers**](https://www.nfoservers.com/) - Low-latency gaming focus.
 *   [**Tempest Hosting**](https://tempest.net/) - Scalable and secure.
 *   [**100up.net**](https://100up.net/) - High-performance speed and reliability.
+*   [**Vultr**](https://www.vultr.com/) - Global cloud platform with high-performance SSD VPS.
+*   [**BuyVM / Frantech**](https://buyvm.net/) - Known for unmetered bandwidth and excellent DDoS protection.
 
 ---
 
