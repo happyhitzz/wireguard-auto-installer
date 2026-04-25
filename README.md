@@ -1,10 +1,10 @@
-# 🚀 WireGuard Advanced Auto-Installer (v2.0)
+# 🚀 WireGuard Advanced Auto-Installer (v2.1)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Bash](https://img.shields.io/badge/Language-Bash-4EAA25.svg)](https://www.gnu.org/software/bash/)
 [![WireGuard](https://img.shields.io/badge/VPN-WireGuard-88171A.svg)](https://www.wireguard.com/)
 
-A powerful, all-in-one solution for deploying and managing a secure WireGuard VPN server. Version 2.0 introduces automated security updates, real-time monitoring, and built-in performance testing.
+A powerful, all-in-one solution for deploying and managing a secure WireGuard VPN server. Version 2.1 introduces optional high-performance network tuning for maximum throughput and low latency.
 
 ---
 
@@ -15,6 +15,7 @@ A powerful, all-in-one solution for deploying and managing a secure WireGuard VP
 | 🐧 **OS Detection** | Automatically configures for Ubuntu, Debian, CentOS, and Fedora. |
 | 👥 **Multi-Client** | Add, list, and manage multiple devices from a single menu. |
 | 🛡️ **Ad-Blocking** | Optional **AdGuard DNS** integration to block ads and trackers. |
+| ⚡ **Performance Tuning** | Optional **GSO offloading**, **IRQ balancing**, and **BBR** congestion control. |
 | 🔒 **Auto-Security** | Enables **Unattended Upgrades** for automatic OS security patches. |
 | 📊 **Monitoring** | Real-time connection monitoring to see active peers and traffic. |
 | 🚀 **Speed Test** | Built-in speed test utility to verify your VPN performance. |
@@ -29,7 +30,7 @@ A powerful, all-in-one solution for deploying and managing a secure WireGuard VP
 | :--- | :--- |
 | **Supported OS** | Ubuntu 20.04+, Debian 10+, CentOS 7+, Fedora 32+ |
 | **Privileges** | Root or Sudo access required |
-| **Tools** | `wget`, `curl`, `qrencode`, `speedtest-cli` (Script will help install these) |
+| **Tools** | `wget`, `curl`, `qrencode`, `ethtool`, `irqbalance` (Script will help install these) |
 
 ---
 
@@ -52,7 +53,7 @@ sudo ./wireguard_installer.sh
 
 ---
 
-## 🎮 Management Menu (v2.0)
+## 🎮 Management Menu (v2.1)
 
 Once installed, running the script again will open the **WireGuard Manager**:
 1. **Install WireGuard:** Initial setup.
@@ -60,14 +61,15 @@ Once installed, running the script again will open the **WireGuard Manager**:
 3. **List Clients:** See all currently configured devices.
 4. **Monitor Connections:** View real-time traffic and connection status.
 5. **Run Speed Test:** Check your server's upload and download speeds.
-6. **Uninstall:** Completely remove the VPN from your system.
+6. **Apply Performance Tuning:** Optimize network stack (GSO, IRQ, BBR).
+7. **Uninstall:** Completely remove the VPN from your system.
 
 ---
 
 ## ⚠️ Important Considerations
 
 *   **Firewall:** Ensure UDP port `51820` is open on your server's firewall.
-*   **Public IP:** The script auto-detects your IP; verify it during setup.
+*   **Performance Tuning:** The tuning option is optional and recommended for high-speed servers to reduce CPU overhead.
 *   **Security:** Automated updates are enabled by default to keep your server patched.
 
 ---
