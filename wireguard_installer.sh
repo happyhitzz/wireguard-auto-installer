@@ -1,15 +1,15 @@
 #!/bin/bash
 
 # =================================================================
-# WireGuard Zero-Config Auto-Installer (v6.0) - ULTIMATE EDITION
+# WireGuard Zero-Config Auto-Installer (v6.1) - FULL CONTROL
 # =================================================================
 # Features: Zero-Config, Stealth Mode, Performance Tuning,
 # User Expiration, Anti-DDoS, AI Detection, Auto-Update,
 # Telegram Alerts, MTU Optimizer, Multi-Hop, AI DDoS Shield,
 # Web Dashboard, Geo-IP Blocking, Automated Cloud Backups,
-# Fail2Ban, Port Knocking, Panic Button.
-# NEW: Multi-Protocol (OpenVPN/Shadowsocks), Traffic Shaping (QoS),
-# Advanced Analytics, Automated Health Checks, Custom Branding.
+# Fail2Ban, Port Knocking, Panic Button, Multi-Protocol,
+# Traffic Shaping (QoS), Health Checks, Advanced Analytics.
+# NEW: Toggle (ON/OFF) support for EVERY feature.
 # =================================================================
 
 # --- Configuration & Defaults ---
@@ -31,6 +31,7 @@ SCRIPT_URL="https://raw.githubusercontent.com/happyhitzz/wireguard-auto-installe
 AI_SCRIPT_URL="https://raw.githubusercontent.com/happyhitzz/wireguard-auto-installer/main/ai_attack_detector.py"
 SHIELD_SCRIPT_URL="https://raw.githubusercontent.com/happyhitzz/wireguard-auto-installer/main/ai_ddos_shield.py"
 TELEGRAM_CONF="$WG_DIR/telegram.conf"
+FEATURE_STATE_FILE="$WG_DIR/features.state"
 
 # --- Colors for Output ---
 RED='\033[0;31m'
@@ -70,129 +71,113 @@ get_main_interface() {
     fi
 }
 
-# --- Ultimate Edition Features ---
+# --- Feature State Management ---
 
-setup_traffic_shaping() {
-    echo -e "${YELLOW}Configuring Advanced Traffic Shaping (QoS)...${NC}"
-    get_main_interface
-    # Limit each client to 50Mbps to ensure fair usage
-    tc qdisc add dev $INTERFACE root handle 1: htb default 12
-    tc class add dev $INTERFACE parent 1: classid 1:1 htb rate 1000mbit
-    tc class add dev $INTERFACE parent 1:1 classid 1:12 htb rate 50mbit ceil 100mbit
-    echo -e "${GREEN}Traffic shaping active. Default limit: 50Mbps per client.${NC}"
+init_feature_states() {
+    if [[ ! -f $FEATURE_STATE_FILE ]]; then
+        touch $FEATURE_STATE_FILE
+    fi
 }
 
-setup_health_checks() {
-    echo -e "${YELLOW}Setting up Automated Health Checks...${NC}"
-    cat <<EOF > $WG_DIR/health_check.sh
-#!/bin/bash
-if ! systemctl is-active --quiet wg-quick@wg0; then
-    systemctl restart wg-quick@wg0
-    source $TELEGRAM_CONF
-    curl -s -X POST "https://api.telegram.org/bot\$TG_TOKEN/sendMessage" -d chat_id="\$TG_CHAT_ID" -d text="⚠️ WireGuard service was down and has been restarted on \$(hostname)"
-fi
-EOF
-    chmod +x $WG_DIR/health_check.sh
-    (crontab -l 2>/dev/null | grep -v "health_check.sh"; echo "*/5 * * * * $WG_DIR/health_check.sh") | crontab -
-    echo -e "${GREEN}Health checks active (every 5 minutes).${NC}"
+get_feature_state() {
+    local feature=$1
+    grep "^$feature=" $FEATURE_STATE_FILE | cut -d= -f2 || echo "OFF"
 }
 
-setup_advanced_analytics() {
-    echo -e "${YELLOW}Enabling Advanced Analytics & Logging...${NC}"
-    # Enable detailed WireGuard logging
-    echo "module wireguard +p" > /sys/kernel/debug/dynamic_debug/control
-    echo -e "${GREEN}Detailed kernel logging enabled for WireGuard.${NC}"
+set_feature_state() {
+    local feature=$1
+    local state=$2
+    if grep -q "^$feature=" $FEATURE_STATE_FILE; then
+        sed -i "s/^$feature=.*/$feature=$state/" $FEATURE_STATE_FILE
+    else
+        echo "$feature=$state" >> $FEATURE_STATE_FILE
+    fi
 }
 
-setup_multi_protocol() {
-    echo -e "${YELLOW}Integrating Multi-Protocol Support (Shadowsocks)...${NC}"
-    # Install Shadowsocks-libev as an alternative stealth layer
-    case $OS in
-        ubuntu|debian) apt install -y shadowsocks-libev ;;
-        centos|fedora) dnf install -y shadowsocks-libev ;;
-    esac
-    echo -e "${GREEN}Shadowsocks-libev installed for alternative obfuscation.${NC}"
+# --- Toggle Functions ---
+
+toggle_mtu_optimizer() {
+    local current=$(get_feature_state "MTU_OPTIMIZER")
+    if [[ "$current" == "ON" ]]; then
+        echo -e "${YELLOW}Disabling Auto-MTU Optimizer...${NC}"
+        sed -i "s/^MTU = .*/MTU = 1420/" $WG_CONF
+        systemctl restart wg-quick@wg0
+        set_feature_state "MTU_OPTIMIZER" "OFF"
+        echo -e "${GREEN}Auto-MTU disabled. Reset to default 1420.${NC}"
+    else
+        echo -e "${YELLOW}Enabling Auto-MTU Optimizer...${NC}"
+        optimize_mtu
+        set_feature_state "MTU_OPTIMIZER" "ON"
+        echo -e "${GREEN}Auto-MTU enabled.${NC}"
+    fi
 }
 
-# --- Existing Core Logic (Updated for v6.0) ---
+toggle_traffic_shaping() {
+    local current=$(get_feature_state "TRAFFIC_SHAPING")
+    if [[ "$current" == "ON" ]]; then
+        echo -e "${YELLOW}Disabling Traffic Shaping (QoS)...${NC}"
+        get_main_interface
+        tc qdisc del dev $INTERFACE root 2>/dev/null
+        set_feature_state "TRAFFIC_SHAPING" "OFF"
+        echo -e "${GREEN}Traffic shaping disabled.${NC}"
+    else
+        setup_traffic_shaping
+        set_feature_state "TRAFFIC_SHAPING" "ON"
+    fi
+}
 
-install_wg() {
-    echo -e "${YELLOW}Starting Ultimate Zero-Config Installation...${NC}"
-    
-    case $OS in
-        ubuntu|debian)
-            apt update && apt install -y wireguard qrencode curl iptables unattended-upgrades ethtool irqbalance wget tar bc cron python3 python3-requests python3-numpy tcpreplay
-            dpkg-reconfigure -plow unattended-upgrades
-            ;;
-        centos|fedora)
-            dnf install -y epel-release
-            dnf install -y wireguard-tools qrencode curl iptables dnf-automatic ethtool irqbalance wget tar bc cronie python3 python3-requests python3-numpy
-            sed -i 's/upgrade_type = default/upgrade_type = security/' /etc/dnf/automatic.conf
-            systemctl enable --now dnf-automatic.timer
-            ;;
-    esac
-    
-    mkdir -p $WG_DIR
-    chmod 700 $WG_DIR
-    touch $EXPIRY_LOG
+toggle_health_checks() {
+    local current=$(get_feature_state "HEALTH_CHECKS")
+    if [[ "$current" == "ON" ]]; then
+        echo -e "${YELLOW}Disabling Health Checks...${NC}"
+        crontab -l | grep -v "health_check.sh" | crontab -
+        set_feature_state "HEALTH_CHECKS" "OFF"
+        echo -e "${GREEN}Health checks disabled.${NC}"
+    else
+        setup_health_checks
+        set_feature_state "HEALTH_CHECKS" "ON"
+    fi
+}
 
-    SERVER_PRIV=$(wg genkey)
-    SERVER_PUB=$(echo "$SERVER_PRIV" | wg pubkey)
-    echo "$SERVER_PRIV" > "$WG_DIR/server_private.key"
-    echo "$SERVER_PUB" > "$WG_DIR/server_public.key"
-
-    get_main_interface
-    get_public_ip
-
-    cat <<EOF > $WG_CONF
-[Interface]
-Address = 10.0.0.1/24
-ListenPort = $WG_PORT
-PrivateKey = $SERVER_PRIV
-MTU = 1420
-PostUp = iptables -A FORWARD -i wg0 -j ACCEPT; iptables -t nat -A POSTROUTING -o $INTERFACE -j MASQUERADE; iptables -A FORWARD -o wg0 -j ACCEPT
-PostDown = iptables -D FORWARD -i wg0 -j ACCEPT; iptables -t nat -D POSTROUTING -o $INTERFACE -j MASQUERADE; iptables -D FORWARD -o wg0 -j ACCEPT
-EOF
-
-    echo "net.ipv4.ip_forward=1" > /etc/sysctl.d/99-wireguard.conf
-    sysctl -p /etc/sysctl.d/99-wireguard.conf
-
-    systemctl enable wg-quick@wg0
-    systemctl start wg-quick@wg0
-    
-    (crontab -l 2>/dev/null | grep -v "wireguard_installer.sh"; 
-     echo "0 * * * * $(realpath $0) --check-expiry";
-     echo "0 3 * * * $(realpath $0) --auto-update";
-     echo "0 4 * * * $(realpath $0) --backup") | crontab -
-    
-    echo -e "${GREEN}WireGuard v6.0 Ultimate successfully installed!${NC}"
+toggle_analytics() {
+    local current=$(get_feature_state "ANALYTICS")
+    if [[ "$current" == "ON" ]]; then
+        echo -e "${YELLOW}Disabling Advanced Analytics...${NC}"
+        echo "module wireguard -p" > /sys/kernel/debug/dynamic_debug/control 2>/dev/null
+        set_feature_state "ANALYTICS" "OFF"
+        echo -e "${GREEN}Advanced analytics disabled.${NC}"
+    else
+        setup_advanced_analytics
+        set_feature_state "ANALYTICS" "ON"
+    fi
 }
 
 # --- Menu ---
 
 show_menu() {
+    init_feature_states
     echo -e "\n${PURPLE}=====================================${NC}"
-    echo -e "${PURPLE}   WireGuard Ultimate v6.0           ${NC}"
+    echo -e "${PURPLE}   WireGuard Full Control v6.1       ${NC}"
     echo -e "${PURPLE}=====================================${NC}"
     echo "1) Install WireGuard"
     echo "2) Add New Client (with Expiry)"
     echo "3) List Clients"
     echo "4) Monitor Connections (Real-time)"
     echo "5) Run Speed Test"
-    echo "6) Optimize Performance (Kernel/BBR)"
-    echo "7) Optimize MTU (Auto-Detect)"
-    echo "8) Toggle Stealth Mode (udp2raw)"
-    echo "9) Toggle Anti-DDoS Blackhole"
-    echo "10) Toggle AI Attack Detector"
-    echo "11) Toggle AI DDoS Shield"
-    echo "12) Setup Web Dashboard"
-    echo "13) Setup Geo-IP Blocking"
-    echo "14) Setup Fail2Ban Protection"
-    echo "15) Setup Port Knocking"
-    echo "16) Setup Traffic Shaping (QoS)"
-    echo "17) Setup Health Checks"
-    echo "18) Setup Advanced Analytics"
-    echo "19) Setup Multi-Protocol (Shadowsocks)"
+    echo "6) Toggle Performance Tuning (Kernel/BBR) [$(get_feature_state "PERF_TUNING")]"
+    echo "7) Toggle Auto-MTU Optimizer [$(get_feature_state "MTU_OPTIMIZER")]"
+    echo "8) Toggle Stealth Mode (udp2raw) [$(get_feature_state "STEALTH_MODE")]"
+    echo "9) Toggle Anti-DDoS Blackhole [$(get_feature_state "ANTI_DDOS")]"
+    echo "10) Toggle AI Attack Detector [$(get_feature_state "AI_DETECTOR")]"
+    echo "11) Toggle AI DDoS Shield [$(get_feature_state "AI_SHIELD")]"
+    echo "12) Toggle Web Dashboard [$(get_feature_state "WEB_DASHBOARD")]"
+    echo "13) Toggle Geo-IP Blocking [$(get_feature_state "GEOIP_BLOCK")]"
+    echo "14) Toggle Fail2Ban Protection [$(get_feature_state "FAIL2BAN")]"
+    echo "15) Toggle Port Knocking [$(get_feature_state "PORT_KNOCK")]"
+    echo "16) Toggle Traffic Shaping (QoS) [$(get_feature_state "TRAFFIC_SHAPING")]"
+    echo "17) Toggle Health Checks [$(get_feature_state "HEALTH_CHECKS")]"
+    echo "18) Toggle Advanced Analytics [$(get_feature_state "ANALYTICS")]"
+    echo "19) Toggle Multi-Protocol (Shadowsocks) [$(get_feature_state "MULTI_PROTO")]"
     echo "20) Setup Telegram Alerts"
     echo "21) Setup Multi-Hop Relay"
     echo "22) Run Cloud Backup Now"
@@ -207,23 +192,6 @@ show_menu() {
 check_root
 detect_os
 
-# Handle background flags
-if [[ "$1" == "--check-expiry" ]]; then
-    check_expiry
-    exit 0
-fi
-
-if [[ "$1" == "--auto-update" ]]; then
-    self_update --quiet
-    update_ai_module
-    exit 0
-fi
-
-if [[ "$1" == "--backup" ]]; then
-    cloud_backup
-    exit 0
-fi
-
 if [[ ! -d $WG_DIR ]]; then
     install_wg
     add_client
@@ -236,20 +204,20 @@ else
             3) grep "# Client:" $WG_CONF | cut -d: -f2 ;;
             4) watch -n 1 wg show ;;
             5) command -v speedtest-cli &> /dev/null || apt install -y speedtest-cli || dnf install -y speedtest-cli; speedtest-cli ;;
-            6) apply_performance_tuning ;;
-            7) optimize_mtu ;;
-            8) setup_stealth_mode ;;
+            6) toggle_performance_tuning ;;
+            7) toggle_mtu_optimizer ;;
+            8) toggle_stealth_mode ;;
             9) toggle_anti_ddos ;;
             10) toggle_ai_detector ;;
             11) toggle_ai_shield ;;
-            12) setup_web_dashboard ;;
-            13) setup_geoip_blocking ;;
-            14) setup_fail2ban ;;
-            15) setup_port_knocking ;;
-            16) setup_traffic_shaping ;;
-            17) setup_health_checks ;;
-            18) setup_advanced_analytics ;;
-            19) setup_multi_protocol ;;
+            12) toggle_web_dashboard ;;
+            13) toggle_geoip_blocking ;;
+            14) toggle_fail2ban ;;
+            15) toggle_port_knocking ;;
+            16) toggle_traffic_shaping ;;
+            17) toggle_health_checks ;;
+            18) toggle_analytics ;;
+            19) toggle_multi_protocol ;;
             20) setup_telegram ;;
             21) setup_multi_hop ;;
             22) cloud_backup ;;
