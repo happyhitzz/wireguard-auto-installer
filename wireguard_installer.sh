@@ -1,10 +1,11 @@
 #!/bin/bash
 
 # =================================================================
-# WireGuard Zero-Config Auto-Installer (v3.5)
+# WireGuard Zero-Config Auto-Installer (v4.0)
 # =================================================================
 # Features: Zero-Config, Stealth Mode, Performance Tuning,
-# User Expiration, Anti-DDoS, AI Detection, and NEW: Full Auto-Update.
+# User Expiration, Anti-DDoS, AI Detection, Auto-Update,
+# and NEW: Telegram Alerts, MTU Optimizer, Multi-Hop Relay.
 # =================================================================
 
 # --- Configuration & Defaults ---
@@ -20,6 +21,7 @@ AI_DETECTOR_SCRIPT="$WG_DIR/ai_attack_detector.py"
 AI_SERVICE_NAME="wg-ai-detector"
 SCRIPT_URL="https://raw.githubusercontent.com/happyhitzz/wireguard-auto-installer/main/wireguard_installer.sh"
 AI_SCRIPT_URL="https://raw.githubusercontent.com/happyhitzz/wireguard-auto-installer/main/ai_attack_detector.py"
+TELEGRAM_CONF="$WG_DIR/telegram.conf"
 
 # --- Colors for Output ---
 RED='\033[0;31m'
@@ -58,6 +60,64 @@ get_main_interface() {
     fi
 }
 
+# --- Telegram Alert Logic ---
+
+send_telegram_msg() {
+    if [[ -f $TELEGRAM_CONF ]]; then
+        source $TELEGRAM_CONF
+        if [[ -n "$TG_TOKEN" && -n "$TG_CHAT_ID" ]]; then
+            curl -s -X POST "https://api.telegram.org/bot$TG_TOKEN/sendMessage" \
+                -d chat_id="$TG_CHAT_ID" \
+                -d text="$1" > /dev/null
+        fi
+    fi
+}
+
+setup_telegram() {
+    echo -e "${YELLOW}Setting up Telegram Alerts...${NC}"
+    read -p "Enter Telegram Bot Token: " TG_TOKEN
+    read -p "Enter Telegram Chat ID: " TG_CHAT_ID
+    echo "TG_TOKEN=\"$TG_TOKEN\"" > $TELEGRAM_CONF
+    echo "TG_CHAT_ID=\"$TG_CHAT_ID\"" >> $TELEGRAM_CONF
+    echo -e "${GREEN}Telegram Alerts Configured!${NC}"
+    send_telegram_msg "🚀 WireGuard Server Alert System Activated!"
+}
+
+# --- Advanced Features ---
+
+optimize_mtu() {
+    echo -e "${YELLOW}Optimizing MTU for best performance...${NC}"
+    # Test MTU starting from 1500 down to 1280
+    for mtu in 1500 1420 1380 1280; do
+        if ping -c 1 -M do -s $((mtu - 28)) 8.8.8.8 &> /dev/null; then
+            BEST_MTU=$mtu
+            break
+        fi
+    done
+    BEST_MTU=${BEST_MTU:-1420}
+    echo -e "${GREEN}Best MTU detected: $BEST_MTU${NC}"
+    sed -i "s/MTU = .*/MTU = $BEST_MTU/" $WG_CONF
+    systemctl restart wg-quick@wg0
+}
+
+setup_multi_hop() {
+    echo -e "${YELLOW}Configuring Multi-Hop Relay...${NC}"
+    read -p "Enter Remote WireGuard Public Key: " REMOTE_PUB
+    read -p "Enter Remote Endpoint (IP:Port): " REMOTE_END
+    
+    cat <<EOF >> $WG_CONF
+
+[Peer]
+# Multi-Hop Relay to Remote
+PublicKey = $REMOTE_PUB
+Endpoint = $REMOTE_END
+AllowedIPs = 0.0.0.0/0
+PersistentKeepalive = 25
+EOF
+    systemctl restart wg-quick@wg0
+    echo -e "${GREEN}Multi-Hop Relay Configured!${NC}"
+}
+
 # --- Auto-Update Logic ---
 
 self_update() {
@@ -68,6 +128,7 @@ self_update() {
             echo -e "${GREEN}New version found! Updating...${NC}"
             mv "$TMP_FILE" "$0"
             chmod +x "$0"
+            send_telegram_msg "🔄 WireGuard Script updated to latest version."
             echo -e "${GREEN}Update complete. Restarting script...${NC}"
             exec "$0" "$@"
         else
@@ -128,6 +189,7 @@ install_wg() {
 Address = 10.0.0.1/24
 ListenPort = $WG_PORT
 PrivateKey = $SERVER_PRIV
+MTU = 1420
 PostUp = iptables -A FORWARD -i wg0 -j ACCEPT; iptables -t nat -A POSTROUTING -o $INTERFACE -j MASQUERADE; iptables -A FORWARD -o wg0 -j ACCEPT
 PostDown = iptables -D FORWARD -i wg0 -j ACCEPT; iptables -t nat -D POSTROUTING -o $INTERFACE -j MASQUERADE; iptables -D FORWARD -o wg0 -j ACCEPT
 EOF
@@ -138,12 +200,12 @@ EOF
     systemctl enable wg-quick@wg0
     systemctl start wg-quick@wg0
     
-    # Setup Cron Jobs (Expiry Check & Auto-Update)
     (crontab -l 2>/dev/null | grep -v "wireguard_installer.sh"; 
      echo "0 * * * * $(realpath $0) --check-expiry";
      echo "0 3 * * * $(realpath $0) --auto-update") | crontab -
     
     echo -e "${GREEN}WireGuard successfully installed!${NC}"
+    send_telegram_msg "✅ WireGuard Server Installed on $SERVER_IP"
 }
 
 add_client() {
@@ -206,6 +268,7 @@ PersistentKeepalive = 25
 EOF
 
     echo -e "${GREEN}Client '$CLIENT_NAME' created!${NC}"
+    send_telegram_msg "👤 New Client Added: $CLIENT_NAME"
     qrencode -t ansiutf8 < "$CLIENT_CONF_FILE"
 }
 
@@ -219,6 +282,7 @@ check_expiry() {
             echo -e "${RED}Expiring client: $NAME${NC}"
             wg set wg0 peer "$PUB" remove
             sed -i "/PublicKey = $PUB/,/AllowedIPs/ s/^/#EXPIRED# /" $WG_CONF
+            send_telegram_msg "⏳ Client Expired & Blocked: $NAME"
             RELOAD_NEEDED=true
         else
             echo "$NAME:$PUB:$EXPIRY" >> $TEMP_LOG
@@ -321,21 +385,24 @@ EOF
 
 show_menu() {
     echo -e "\n${BLUE}=====================================${NC}"
-    echo -e "${BLUE}   WireGuard Auto-Update v3.5        ${NC}"
+    echo -e "${BLUE}   WireGuard Power User v4.0         ${NC}"
     echo -e "${BLUE}=====================================${NC}"
     echo "1) Install WireGuard"
     echo "2) Add New Client (with Expiry)"
     echo "3) List Clients"
     echo "4) Monitor Connections"
     echo "5) Run Speed Test"
-    echo "6) Optimize Performance"
-    echo "7) Toggle Stealth Mode"
-    echo "8) Toggle Anti-DDoS Blackhole"
-    echo "9) Toggle AI Attack Detector"
-    echo "10) Check for Updates Now"
-    echo "11) Uninstall"
-    echo "12) Exit"
-    read -p "Select [1-12]: " OPTION
+    echo "6) Optimize Performance (Kernel/BBR)"
+    echo "7) Optimize MTU (Auto-Detect)"
+    echo "8) Toggle Stealth Mode (udp2raw)"
+    echo "9) Toggle Anti-DDoS Blackhole"
+    echo "10) Toggle AI Attack Detector"
+    echo "11) Setup Telegram Alerts"
+    echo "12) Setup Multi-Hop Relay"
+    echo "13) Check for Updates Now"
+    echo "14) Uninstall"
+    echo "15) Exit"
+    read -p "Select [1-15]: " OPTION
 }
 
 # --- Main ---
@@ -367,12 +434,15 @@ else
             4) watch -n 1 wg show ;;
             5) command -v speedtest-cli &> /dev/null || apt install -y speedtest-cli || dnf install -y speedtest-cli; speedtest-cli ;;
             6) apply_performance_tuning ;;
-            7) setup_stealth_mode ;;
-            8) toggle_anti_ddos ;;
-            9) toggle_ai_detector ;;
-            10) self_update; update_ai_module ;;
-            11) systemctl stop wg-quick@wg0; systemctl stop $AI_SERVICE_NAME &> /dev/null; rm -rf $WG_DIR; crontab -l | grep -v "wireguard_installer.sh" | crontab -; echo "Uninstalled."; exit 0 ;;
-            12) exit 0 ;;
+            7) optimize_mtu ;;
+            8) setup_stealth_mode ;;
+            9) toggle_anti_ddos ;;
+            10) toggle_ai_detector ;;
+            11) setup_telegram ;;
+            12) setup_multi_hop ;;
+            13) self_update; update_ai_module ;;
+            14) systemctl stop wg-quick@wg0; systemctl stop $AI_SERVICE_NAME &> /dev/null; rm -rf $WG_DIR; crontab -l | grep -v "wireguard_installer.sh" | crontab -; echo "Uninstalled."; exit 0 ;;
+            15) exit 0 ;;
             *) echo -e "${RED}Invalid option.${NC}" ;;
         esac
     done
