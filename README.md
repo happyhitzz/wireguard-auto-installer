@@ -63,16 +63,17 @@ wget https://raw.githubusercontent.com/happyhitzz/wireguard-auto-installer/main/
 
 ---
 
-## 🚀 Ultimate Edition Capabilities
+## 🛡️ Hardened Security Suite
 
-*   **Multi-Protocol Stealth:** If WireGuard is blocked, switch to the integrated Shadowsocks layer for a different type of obfuscation.
-*   **Quality of Service (QoS):** Prevent a single user from hogging all the bandwidth. The script automatically shapes traffic to ensure a smooth experience for everyone.
-*   **Self-Healing Infrastructure:** The automated health check system monitors the WireGuard service every 5 minutes and restarts it if any issues are detected, sending you a Telegram alert instantly.
-*   **Data-Driven Insights:** Enable advanced analytics to get a deep look into your VPN's performance and traffic patterns.
+*   **Fail2Ban:** Adds an extra layer of protection by monitoring logs and banning malicious actors who attempt to brute-force your server.
+*   **Port Knocking:** Your WireGuard port remains "closed" to the public. You must "knock" on a specific sequence of ports (7000, 8000, 9000) to open it for your IP.
+*   **Panic Button:** If you suspect your server is under heavy attack, the Panic Button instantly drops all incoming and outgoing traffic, preserving only your current SSH connection.
 
 ---
 
 ## ☁️ Recommended Hosting (DDoS Protected)
+
+For the best experience and maximum uptime, we recommend hosting your WireGuard server with providers that offer robust, enterprise-grade DDoS protection.
 
 | Provider | Protection Type | Best For |
 | :--- | :--- | :--- |
@@ -81,6 +82,19 @@ wget https://raw.githubusercontent.com/happyhitzz/wireguard-auto-installer/main/
 | [**OVHcloud**](https://www.ovhcloud.com/) | **VAC (Proprietary)** | Global Infrastructure & Enterprise Reliability. |
 | [**NFOservers**](https://www.nfoservers.com/) | **Custom In-House** | Gaming-Grade Network & Low Jitter. |
 | [**Evolution Host**](https://evolution-host.com/) | **EvoShield** | Advanced Layer 3, 4, and 7 Mitigation. |
+| [**Path.net**](https://path.net/) | **Direct Infrastructure** | Direct access to world-class DDoS filtering. |
+| [**100up.net**](https://100up.net/) | **Premium Filtering** | Speed-Focused Hosting with Security. |
+| [**Vultr**](https://www.vultr.com/) | **Cloud Mitigation** | High-Performance Cloud VPS with global reach. |
+| [**Kamatera**](https://www.kamatera.com/) | **Enterprise Cloud** | Scalable resources with built-in security. |
+| [**Hostinger**](https://www.hostinger.com/) | **Wanguard** | Budget-friendly with solid protection. |
+| [**IONOS**](https://www.ionos.com/) | **Proprietary** | Scalable resources and reliable infrastructure. |
+| [**AvenaCloud**](https://avenacloud.com/) | **Advanced Mitigation** | High-performance VPS with built-in security. |
+| [**Sparked Host**](https://sparkedhost.com/) | **Enterprise Grade** | Game-server grade DDoS protection. |
+| [**RubyHost**](https://rubyhost.com/) | **NeoProtect** | Specialized DDoS protection for high-risk apps. |
+| [**Daydream Host**](https://daydreamhost.com/) | **Premium KVM** | High-performance VPS with unmetered NVMe. |
+| [**VelocityHost**](https://velocityhost.com/) | **Advanced Protection** | High-performance hosting for game servers and VPS. |
+| [**Hybrid Hosting**](https://hybridhosting.com/) | **Cosmic Guard** | Advanced protection via custom management interface. |
+| [**Ateex Cloud**](https://ateex.cloud/) | **Path.net / Cosmic Guard** | Premium protection included at no extra cost. |
 
 ---
 
