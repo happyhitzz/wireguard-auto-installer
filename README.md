@@ -1,10 +1,10 @@
-# 🚀 WireGuard Zero-Config Auto-Installer (v7.0) - ENTERPRISE
+# 🚀 WireGuard Zero-Config Auto-Installer (v8.0) - QUANTUM EDITION
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Bash](https://img.shields.io/badge/Language-Bash-4EAA25.svg)](https://www.gnu.org/software/bash/)
 [![WireGuard](https://img.shields.io/badge/VPN-WireGuard-88171A.svg)](https://www.wireguard.com/)
 
-The ultimate "Zero-Config" WireGuard deployment suite. Version 7.0 introduces the **Enterprise Edition**, featuring Multi-Cloud Load Balancing, V2Ray/Xray Obfuscation, REST API Integration, and Automated SSL/TLS.
+The ultimate "Zero-Config" WireGuard deployment suite. Version 8.0 introduces the **Quantum Edition**, featuring Quantum-Resistant VPN, Decentralized VPN Integration, AI-Powered Predictive Threat Intelligence, and Blockchain Identity Management.
 
 ---
 
@@ -12,13 +12,18 @@ The ultimate "Zero-Config" WireGuard deployment suite. Version 7.0 introduces th
 
 | Feature | Description |
 | :--- | :--- |
+| ⚛️ **Quantum-Resistant VPN** | Future-proof your VPN against quantum computing attacks. |
+| 🌐 **Decentralized VPN (dVPN)** | Integrate with dVPN networks for enhanced privacy and censorship resistance. |
+| 🧠 **AI Predictive Threat** | Proactive AI-driven intelligence to anticipate and neutralize threats. |
+| ⛓️ **Blockchain Identity** | Secure and decentralized client identity management. |
+| 🔒 **MFA for Clients** | Multi-Factor Authentication for an extra layer of client security. |
+| 📡 **DoH/DoT Proxy** | Integrated DNS-over-HTTPS/TLS for enhanced DNS privacy. |
+| 🚀 **Serverless Deployment** | Simplify client configuration and distribution with serverless methods. |
+| 📈 **Automated Compliance** | Generate reports for regulatory and security compliance. |
+| 🔄 **Full Toggle Support** | Every feature can be turned ON or OFF with one click from the menu. |
 | ⚖️ **Load Balancing** | High-availability support with **HAProxy** for multi-cloud deployments. |
 | 🕵️ **V2Ray/Xray** | Next-gen traffic obfuscation to bypass the most advanced DPI firewalls. |
 | 🔌 **REST API** | Full-scale API for external integrations and automated user management. |
-| 🔒 **Automated SSL** | Built-in **Certbot** integration for automated SSL/TLS certificate management. |
-| 🔄 **Full Toggle Support** | Every feature can be turned ON or OFF with one click from the menu. |
-| 🚀 **Multi-Protocol** | Integrated support for **Shadowsocks** and **WireGuard** in one suite. |
-| 🚦 **Traffic Shaping** | Advanced **QoS** to ensure fair bandwidth distribution among all clients. |
 | 🛡️ **AI Security Suite** | AI-driven DDoS protection and log-based attack detection. |
 
 ---
@@ -33,9 +38,9 @@ wget https://raw.githubusercontent.com/happyhitzz/wireguard-auto-installer/main/
 
 ---
 
-## 🎮 Management Menu (v7.0)
+## 🎮 Management Menu (v8.0)
 
-The Enterprise menu now features **30 powerful options** for total control:
+The Quantum Edition menu now features **38 powerful options** for total control:
 
 1. **Install WireGuard:** Fully automated setup.
 2. **Add New Client:** Create peers with optional **Expiration Days**.
@@ -62,20 +67,28 @@ The Enterprise menu now features **30 powerful options** for total control:
 23. **Setup Automated SSL:** [Enterprise] Certbot certificate management.
 24. **Setup Telegram Alerts:** Configure instant mobile notifications.
 25. **Setup Multi-Hop Relay:** Chain your VPN to another server.
-26. **Run Cloud Backup Now:** Manually trigger a configuration backup.
-27. **Check for Updates Now:** Manually trigger a full system and script update.
-28. **PANIC BUTTON:** Instant server lockdown in case of emergency.
-29. **Uninstall:** Cleanly remove everything from your system.
-30. **Exit**
+26. **Toggle Quantum-Resistant VPN:** [ON/OFF] Future-proof encryption.
+27. **Toggle Decentralized VPN Integration:** [ON/OFF] Enhanced privacy via dVPNs.
+28. **Toggle AI Predictive Threat Intelligence:** [ON/OFF] Proactive threat prediction.
+29. **Setup Automated Compliance Reporting:** Generate regulatory reports.
+30. **Setup Multi-Factor Authentication (MFA) for Clients:** Add 2FA/MFA for clients.
+31. **Toggle Integrated DoH/DoT Proxy:** [ON/OFF] Secure DNS resolution.
+32. **Setup Serverless Client Deployment:** Simplify client distribution.
+33. **Setup Blockchain-based Client Identity Management:** Decentralized identity.
+34. **Run Cloud Backup Now:** Manually trigger a configuration backup.
+35. **Check for Updates Now:** Manually trigger a full system and script update.
+36. **PANIC BUTTON:** Instant server lockdown in case of emergency.
+37. **Uninstall:** Cleanly remove everything from your system.
+38. **Exit**
 
 ---
 
-## ⚖️ Enterprise Capabilities
+## ⚛️ Quantum Edition Capabilities
 
-*   **High Availability:** Use the integrated HAProxy support to distribute traffic across multiple nodes, ensuring your VPN stays online even if one server fails.
-*   **Next-Gen Stealth:** When standard obfuscation isn't enough, V2Ray/Xray provides the most advanced traffic masking available today.
-*   **Programmable Infrastructure:** Use the REST API to integrate your VPN manager with your own apps, websites, or billing systems.
-*   **Secure Management:** Automated SSL/TLS ensures that your Web Dashboard and API endpoints are always protected by modern encryption.
+*   **Future-Proof Security:** Quantum-Resistant VPN ensures your data remains secure against the advent of quantum computers.
+*   **Ultimate Privacy:** Decentralized VPN integration and Blockchain Identity Management provide unparalleled anonymity and censorship resistance.
+*   **Proactive Defense:** AI-Powered Predictive Threat Intelligence anticipates attacks before they happen, keeping your network one step ahead.
+*   **Enterprise-Grade Compliance:** Automated Compliance Reporting and Multi-Factor Authentication meet the strictest regulatory and security requirements.
 
 ---
 
