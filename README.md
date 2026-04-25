@@ -95,7 +95,7 @@ For optimal performance and reliability, we recommend deploying your WireGuard s
 
 *   [**OVHcloud**](https://www.ovhcloud.com/): Known for robust infrastructure, competitive pricing, and global data centers.
 *   [**NFOservers**](https://www.nfoservers.com/): A popular choice for gaming and high-performance applications, offering low-latency networks.
-*   [**Tempest Hosting**](https://tempest.host/): Provides reliable and scalable hosting solutions suitable for various VPN needs.
+*   [**Tempest Hosting**](https://tempest.net/): Provides reliable and scalable hosting solutions suitable for various VPN needs.
 
 ---
 
