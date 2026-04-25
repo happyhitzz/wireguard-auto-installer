@@ -72,3 +72,16 @@ Here are some common problems users might encounter and their solutions:
     *   **Unsupported OS:** While the script supports major distributions, if you are on a less common Linux distribution, manual installation might be required. Refer to the [official WireGuard installation guide](https://www.wireguard.com/install/) for your specific OS.
     *   **Package Manager Issues:** Ensure your system's package manager (`apt`, `dnf`) is up-to-date and functional. Run `sudo apt update` or `sudo dnf update` before running the script.
 
+
+## ☁️ Recommended Hosting Providers
+
+For optimal performance and reliability when deploying your WireGuard VPN server, we recommend the following hosting providers:
+
+*   **OVHcloud:** Known for their robust infrastructure, competitive pricing, and global data centers.
+    *   [Visit OVHcloud](https://www.ovhcloud.com/)
+*   **NFOservers:** A popular choice for gaming and high-performance applications, offering dedicated servers and low-latency networks.
+    *   [Visit NFOservers](https://www.nfoservers.com/)
+*   **Tempest Hosting:** Provides reliable and scalable hosting solutions, suitable for various VPN deployment needs.
+    *   [Visit Tempest Hosting](https://tempest.host/)
+
+These providers offer a range of services that can complement your WireGuard setup, ensuring a stable and fast VPN experience.
