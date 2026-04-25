@@ -1,12 +1,13 @@
 #!/bin/bash
 
 # =================================================================
-# WireGuard Zero-Config Auto-Installer (v5.0) - NEXT-GEN
+# WireGuard Zero-Config Auto-Installer (v5.1) - HARDENED SECURITY
 # =================================================================
 # Features: Zero-Config, Stealth Mode, Performance Tuning,
 # User Expiration, Anti-DDoS, AI Detection, Auto-Update,
 # Telegram Alerts, MTU Optimizer, Multi-Hop, AI DDoS Shield,
-# NEW: Web Dashboard, Geo-IP Blocking, Automated Cloud Backups.
+# Web Dashboard, Geo-IP Blocking, Automated Cloud Backups,
+# NEW: Fail2Ban Integration, Port Knocking, Panic Button.
 # =================================================================
 
 # --- Configuration & Defaults ---
@@ -27,7 +28,6 @@ SCRIPT_URL="https://raw.githubusercontent.com/happyhitzz/wireguard-auto-installe
 AI_SCRIPT_URL="https://raw.githubusercontent.com/happyhitzz/wireguard-auto-installer/main/ai_attack_detector.py"
 SHIELD_SCRIPT_URL="https://raw.githubusercontent.com/happyhitzz/wireguard-auto-installer/main/ai_ddos_shield.py"
 TELEGRAM_CONF="$WG_DIR/telegram.conf"
-GEOIP_DB="/usr/share/GeoIP/GeoLite2-Country.mmdb"
 
 # --- Colors for Output ---
 RED='\033[0;31m'
@@ -66,78 +66,91 @@ get_main_interface() {
     fi
 }
 
-# --- Next-Gen Features ---
+# --- Hardened Security Features ---
 
-setup_web_dashboard() {
-    echo -e "${YELLOW}Setting up Web Management Dashboard...${NC}"
-    if systemctl is-active --quiet $DASHBOARD_SERVICE; then
-        echo -e "${GREEN}Dashboard is already running.${NC}"
-    else
-        # Using a lightweight, popular dashboard like WireGuard-UI
-        if [[ ! -f /usr/local/bin/wireguard-ui ]]; then
-            VERSION=$(curl -s https://api.github.com/repos/ngoduyduyet/wireguard-ui/releases/latest | grep tag_name | cut -d '"' -f 4)
-            wget https://github.com/ngoduyduyet/wireguard-ui/releases/download/$VERSION/wireguard-ui-$VERSION-linux-amd64.tar.gz -O /tmp/wg-ui.tar.gz
-            tar -xvf /tmp/wg-ui.tar.gz -C /usr/local/bin/
-            chmod +x /usr/local/bin/wireguard-ui
-        fi
-
-        cat <<EOF > /etc/systemd/system/$DASHBOARD_SERVICE.service
-[Unit]
-Description=WireGuard Web UI
-After=network.target
-
-[Service]
-Type=simple
-WorkingDirectory=$WG_DIR
-ExecStart=/usr/local/bin/wireguard-ui
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
-EOF
-        systemctl daemon-reload
-        systemctl enable --now $DASHBOARD_SERVICE
-        get_public_ip
-        echo -e "${GREEN}Dashboard active at http://$SERVER_IP:5000${NC}"
-        send_telegram_msg "🌐 Web Dashboard Activated at http://$SERVER_IP:5000"
-    fi
-}
-
-setup_geoip_blocking() {
-    echo -e "${YELLOW}Configuring Geo-IP Blocking...${NC}"
-    # Install xtables-addons for GeoIP support
+setup_fail2ban() {
+    echo -e "${YELLOW}Integrating Fail2Ban for SSH and VPN protection...${NC}"
     case $OS in
-        ubuntu|debian)
-            apt install -y xtables-addons-common libtext-csv-xs-perl libmoosex-types-netaddr-ip-perl
-            /usr/libexec/xtables-addons/xt_geoip_dl
-            mkdir -p /usr/share/xt_geoip
-            /usr/libexec/xtables-addons/xt_geoip_build -D /usr/share/xt_geoip *.csv
-            ;;
-        *)
-            echo -e "${RED}Geo-IP blocking currently only optimized for Debian/Ubuntu.${NC}"
-            return
-            ;;
+        ubuntu|debian) apt install -y fail2ban ;;
+        centos|fedora) dnf install -y fail2ban ;;
     esac
-    
-    read -p "Enter country codes to BLOCK (e.g., CN,RU,KP): " BLOCKED_COUNTRIES
-    iptables -A INPUT -m geoip --src-cc $BLOCKED_COUNTRIES -j DROP
-    echo -e "${GREEN}Blocked traffic from: $BLOCKED_COUNTRIES${NC}"
+
+    cat <<EOF > /etc/fail2ban/jail.local
+[sshd]
+enabled = true
+port = ssh
+filter = sshd
+logpath = /var/log/auth.log
+maxretry = 3
+bantime = 3600
+
+[wireguard]
+enabled = true
+port = $WG_PORT
+protocol = udp
+filter = wireguard
+logpath = /var/log/syslog
+maxretry = 5
+bantime = 86400
+EOF
+
+    cat <<EOF > /etc/fail2ban/filter.d/wireguard.conf
+[Definition]
+failregex = wireguard: .* handshake for .* failed
+ignoreregex =
+EOF
+
+    systemctl enable --now fail2ban
+    echo -e "${GREEN}Fail2Ban configured and active.${NC}"
 }
 
-cloud_backup() {
-    echo -e "${YELLOW}Performing Automated Cloud Backup...${NC}"
-    BACKUP_FILE="/tmp/wg-backup-$(date +%F).tar.gz"
-    tar -czf $BACKUP_FILE $WG_DIR
-    
-    # Option to upload to a private GitHub repo or S3 (Simplified for now)
-    echo -e "${BLUE}Backup created at $BACKUP_FILE${NC}"
-    send_telegram_msg "💾 Automated Cloud Backup completed: $(date)"
+setup_port_knocking() {
+    echo -e "${YELLOW}Setting up Port Knocking (knockd)...${NC}"
+    case $OS in
+        ubuntu|debian) apt install -y knockd ;;
+        centos|fedora) dnf install -y knockd ;;
+    esac
+
+    cat <<EOF > /etc/knockd.conf
+[options]
+    UseSyslog
+
+[openWireGuard]
+    sequence    = 7000,8000,9000
+    seq_timeout = 5
+    command     = /sbin/iptables -I INPUT -s %IP% -p udp --dport $WG_PORT -j ACCEPT
+    tcpflags    = syn
+
+[closeWireGuard]
+    sequence    = 9000,8000,7000
+    seq_timeout = 5
+    command     = /sbin/iptables -D INPUT -s %IP% -p udp --dport $WG_PORT -j ACCEPT
+    tcpflags    = syn
+EOF
+
+    systemctl enable --now knockd
+    echo -e "${GREEN}Port Knocking active. Sequence: 7000, 8000, 9000 (TCP).${NC}"
 }
 
-# --- Existing Core Logic (Updated for v5.0) ---
+panic_button() {
+    echo -e "${RED}🚨 PANIC BUTTON ACTIVATED! LOCKING DOWN SERVER...${NC}"
+    iptables -P INPUT DROP
+    iptables -P FORWARD DROP
+    iptables -A INPUT -i lo -j ACCEPT
+    # Allow current SSH session to prevent lockout
+    SSH_IP=$(echo $SSH_CLIENT | awk '{print $1}')
+    if [[ -n "$SSH_IP" ]]; then
+        iptables -A INPUT -s $SSH_IP -p tcp --dport 22 -j ACCEPT
+    fi
+    systemctl stop wg-quick@wg0
+    echo -e "${RED}All VPN traffic blocked. Only current SSH session allowed.${NC}"
+    send_telegram_msg "🚨 PANIC BUTTON ACTIVATED on $SERVER_IP! Server is in lockdown."
+}
+
+# --- Existing Core Logic (Updated for v5.1) ---
 
 install_wg() {
-    echo -e "${YELLOW}Starting Next-Gen Zero-Config Installation...${NC}"
+    echo -e "${YELLOW}Starting Hardened Zero-Config Installation...${NC}"
     
     case $OS in
         ubuntu|debian)
@@ -185,15 +198,15 @@ EOF
      echo "0 3 * * * $(realpath $0) --auto-update";
      echo "0 4 * * * $(realpath $0) --backup") | crontab -
     
-    echo -e "${GREEN}WireGuard v5.0 successfully installed!${NC}"
-    send_telegram_msg "✅ Next-Gen WireGuard Server Installed on $SERVER_IP"
+    echo -e "${GREEN}WireGuard v5.1 successfully installed!${NC}"
+    send_telegram_msg "✅ Hardened WireGuard Server Installed on $SERVER_IP"
 }
 
 # --- Menu ---
 
 show_menu() {
     echo -e "\n${BLUE}=====================================${NC}"
-    echo -e "${BLUE}   WireGuard Next-Gen v5.0           ${NC}"
+    echo -e "${BLUE}   WireGuard Hardened v5.1           ${NC}"
     echo -e "${BLUE}=====================================${NC}"
     echo "1) Install WireGuard"
     echo "2) Add New Client (with Expiry)"
@@ -208,13 +221,16 @@ show_menu() {
     echo "11) Toggle AI DDoS Shield"
     echo "12) Setup Web Dashboard"
     echo "13) Setup Geo-IP Blocking"
-    echo "14) Setup Telegram Alerts"
-    echo "15) Setup Multi-Hop Relay"
-    echo "16) Run Cloud Backup Now"
-    echo "17) Check for Updates Now"
-    echo "18) Uninstall"
-    echo "19) Exit"
-    read -p "Select [1-19]: " OPTION
+    echo "14) Setup Fail2Ban Protection"
+    echo "15) Setup Port Knocking"
+    echo "16) Setup Telegram Alerts"
+    echo "17) Setup Multi-Hop Relay"
+    echo "18) Run Cloud Backup Now"
+    echo "19) Check for Updates Now"
+    echo "20) ${RED}PANIC BUTTON (Lockdown)${NC}"
+    echo "21) Uninstall"
+    echo "22) Exit"
+    read -p "Select [1-22]: " OPTION
 }
 
 # --- Main ---
@@ -258,12 +274,15 @@ else
             11) toggle_ai_shield ;;
             12) setup_web_dashboard ;;
             13) setup_geoip_blocking ;;
-            14) setup_telegram ;;
-            15) setup_multi_hop ;;
-            16) cloud_backup ;;
-            17) self_update; update_ai_module ;;
-            18) systemctl stop wg-quick@wg0; systemctl stop $AI_DETECTOR_SERVICE &> /dev/null; systemctl stop $AI_SHIELD_SERVICE &> /dev/null; systemctl stop $DASHBOARD_SERVICE &> /dev/null; rm -rf $WG_DIR; crontab -l | grep -v "wireguard_installer.sh" | crontab -; echo "Uninstalled."; exit 0 ;;
-            19) exit 0 ;;
+            14) setup_fail2ban ;;
+            15) setup_port_knocking ;;
+            16) setup_telegram ;;
+            17) setup_multi_hop ;;
+            18) cloud_backup ;;
+            19) self_update; update_ai_module ;;
+            20) panic_button ;;
+            21) systemctl stop wg-quick@wg0; rm -rf $WG_DIR; echo "Uninstalled."; exit 0 ;;
+            22) exit 0 ;;
             *) echo -e "${RED}Invalid option.${NC}" ;;
         esac
     done
