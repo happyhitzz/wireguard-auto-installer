@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # =================================================================
-# WireGuard Zero-Config Auto-Installer (v3.3)
+# WireGuard Zero-Config Auto-Installer (v3.4)
 # =================================================================
 # Features: Zero-Config, Stealth Mode, Performance Tuning,
-# User Expiration, and NEW: Anti-DDoS Blackhole Toggle.
+# User Expiration, Anti-DDoS, and NEW: Optional AI Attack Detection.
 # =================================================================
 
 # --- Configuration & Defaults ---
@@ -16,6 +16,8 @@ STEALTH_PORT="443"
 STEALTH_PASS="mypassword123"
 EXPIRY_LOG="$WG_DIR/expiry.log"
 BLACKHOLE_CONF="/etc/sysctl.d/99-anti-ddos.conf"
+AI_DETECTOR_SCRIPT="$WG_DIR/ai_attack_detector.py"
+AI_SERVICE_NAME="wg-ai-detector"
 
 # --- Colors for Output ---
 RED='\033[0;31m'
@@ -61,12 +63,12 @@ install_wg() {
     
     case $OS in
         ubuntu|debian)
-            apt update && apt install -y wireguard qrencode curl iptables unattended-upgrades ethtool irqbalance wget tar bc cron
+            apt update && apt install -y wireguard qrencode curl iptables unattended-upgrades ethtool irqbalance wget tar bc cron python3 python3-requests
             dpkg-reconfigure -plow unattended-upgrades
             ;;
         centos|fedora)
             dnf install -y epel-release
-            dnf install -y wireguard-tools qrencode curl iptables dnf-automatic ethtool irqbalance wget tar bc cronie
+            dnf install -y wireguard-tools qrencode curl iptables dnf-automatic ethtool irqbalance wget tar bc cronie python3 python3-requests
             sed -i 's/upgrade_type = default/upgrade_type = security/' /etc/dnf/automatic.conf
             systemctl enable --now dnf-automatic.timer
             ;;
@@ -228,19 +230,13 @@ toggle_anti_ddos() {
     else
         echo -e "${YELLOW}Enabling Anti-DDoS Blackhole Protection...${NC}"
         cat <<EOF > $BLACKHOLE_CONF
-# Drop ICMP echo requests (Ping)
 net.ipv4.icmp_echo_ignore_all = 1
-# Enable TCP SYN Cookie Protection
 net.ipv4.tcp_syncookies = 1
-# Increase SYN backlog
 net.ipv4.tcp_max_syn_backlog = 2048
-# Enable Source Address Verification (Spoofing protection)
 net.ipv4.conf.all.rp_filter = 1
 net.ipv4.conf.default.rp_filter = 1
-# Drop redirects
 net.ipv4.conf.all.accept_redirects = 0
 net.ipv4.conf.default.accept_redirects = 0
-# Ignore bogus error responses
 net.ipv4.icmp_ignore_bogus_error_responses = 1
 EOF
         sysctl -p $BLACKHOLE_CONF &> /dev/null
@@ -248,11 +244,50 @@ EOF
     fi
 }
 
+toggle_ai_detector() {
+    if systemctl is-active --quiet $AI_SERVICE_NAME; then
+        systemctl stop $AI_SERVICE_NAME
+        systemctl disable $AI_SERVICE_NAME
+        echo -e "${RED}AI Attack Detector Disabled.${NC}"
+    else
+        echo -e "${YELLOW}Enabling AI Attack Detector...${NC}"
+        
+        # Ensure Python script exists
+        if [[ ! -f $AI_DETECTOR_SCRIPT ]]; then
+            # Download or create the script if missing
+            cp $(dirname $(realpath $0))/ai_attack_detector.py $AI_DETECTOR_SCRIPT
+        fi
+
+        read -p "Enter Discord Webhook URL (optional): " WEBHOOK
+        if [[ -n "$WEBHOOK" ]]; then
+            sed -i "s|DISCORD_WEBHOOK = .*|DISCORD_WEBHOOK = \"$WEBHOOK\"|" $AI_DETECTOR_SCRIPT
+        fi
+
+        # Create Systemd Service
+        cat <<EOF > /etc/systemd/system/$AI_SERVICE_NAME.service
+[Unit]
+Description=WireGuard AI Attack Detector
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 $AI_DETECTOR_SCRIPT
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+EOF
+        systemctl daemon-reload
+        systemctl enable --now $AI_SERVICE_NAME
+        echo -e "${GREEN}AI Attack Detector Enabled and Running.${NC}"
+    fi
+}
+
 # --- Menu ---
 
 show_menu() {
     echo -e "\n${BLUE}=====================================${NC}"
-    echo -e "${BLUE}   WireGuard Anti-DDoS v3.3          ${NC}"
+    echo -e "${BLUE}   WireGuard AI-Powered v3.4         ${NC}"
     echo -e "${BLUE}=====================================${NC}"
     echo "1) Install WireGuard"
     echo "2) Add New Client (with Expiry)"
@@ -262,10 +297,11 @@ show_menu() {
     echo "6) Optimize Performance"
     echo "7) Toggle Stealth Mode"
     echo "8) Toggle Anti-DDoS Blackhole"
-    echo "9) Check/Force Expiry Now"
-    echo "10) Uninstall"
-    echo "11) Exit"
-    read -p "Select [1-11]: " OPTION
+    echo "9) Toggle AI Attack Detector (Optional)"
+    echo "10) Check/Force Expiry Now"
+    echo "11) Uninstall"
+    echo "12) Exit"
+    read -p "Select [1-12]: " OPTION
 }
 
 # --- Main ---
@@ -292,9 +328,10 @@ else
             6) apply_performance_tuning ;;
             7) setup_stealth_mode ;;
             8) toggle_anti_ddos ;;
-            9) check_expiry; echo "Expiry check complete." ;;
-            10) systemctl stop wg-quick@wg0; rm -rf $WG_DIR; crontab -l | grep -v "wireguard_installer.sh" | crontab -; echo "Uninstalled."; exit 0 ;;
-            11) exit 0 ;;
+            9) toggle_ai_detector ;;
+            10) check_expiry; echo "Expiry check complete." ;;
+            11) systemctl stop wg-quick@wg0; systemctl stop $AI_SERVICE_NAME &> /dev/null; rm -rf $WG_DIR; crontab -l | grep -v "wireguard_installer.sh" | crontab -; echo "Uninstalled."; exit 0 ;;
+            12) exit 0 ;;
             *) echo -e "${RED}Invalid option.${NC}" ;;
         esac
     done
