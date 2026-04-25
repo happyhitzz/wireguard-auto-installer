@@ -27,7 +27,7 @@ The ultimate "Zero-Config" WireGuard deployment suite. Version 8.1 introduces th
 
 ## ⚡ Quick Start (No Config Needed)
 
-Just run this single command on your server:
+Run this single command on your server to install the entire WireGuard suite, including all advanced features and the AI Assistant:
 
 ```bash
 wget https://raw.githubusercontent.com/happyhitzz/wireguard-auto-installer/main/wireguard_installer.sh && chmod +x wireguard_installer.sh && sudo ./wireguard_installer.sh
