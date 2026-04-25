@@ -1,10 +1,10 @@
-# 🚀 WireGuard Advanced Auto-Installer (v2.1)
+# 🚀 WireGuard Advanced Auto-Installer (v2.2)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Bash](https://img.shields.io/badge/Language-Bash-4EAA25.svg)](https://www.gnu.org/software/bash/)
 [![WireGuard](https://img.shields.io/badge/VPN-WireGuard-88171A.svg)](https://www.wireguard.com/)
 
-A powerful, all-in-one solution for deploying and managing a secure WireGuard VPN server. Version 2.1 introduces optional high-performance network tuning for maximum throughput and low latency.
+A powerful, all-in-one solution for deploying and managing a secure WireGuard VPN server. Version 2.2 introduces **Stealth Mode**, an optional obfuscation layer to bypass strict firewalls and deep packet inspection (DPI).
 
 ---
 
@@ -15,6 +15,7 @@ A powerful, all-in-one solution for deploying and managing a secure WireGuard VP
 | 🐧 **OS Detection** | Automatically configures for Ubuntu, Debian, CentOS, and Fedora. |
 | 👥 **Multi-Client** | Add, list, and manage multiple devices from a single menu. |
 | 🛡️ **Ad-Blocking** | Optional **AdGuard DNS** integration to block ads and trackers. |
+| 🕵️ **Stealth Mode** | Optional **udp2raw** obfuscation to bypass DPI and firewalls. |
 | ⚡ **Performance Tuning** | Optional **GSO offloading**, **IRQ balancing**, and **BBR** congestion control. |
 | 🔒 **Auto-Security** | Enables **Unattended Upgrades** for automatic OS security patches. |
 | 📊 **Monitoring** | Real-time connection monitoring to see active peers and traffic. |
@@ -30,7 +31,7 @@ A powerful, all-in-one solution for deploying and managing a secure WireGuard VP
 | :--- | :--- |
 | **Supported OS** | Ubuntu 20.04+, Debian 10+, CentOS 7+, Fedora 32+ |
 | **Privileges** | Root or Sudo access required |
-| **Tools** | `wget`, `curl`, `qrencode`, `ethtool`, `irqbalance` (Script will help install these) |
+| **Tools** | `wget`, `curl`, `qrencode`, `ethtool`, `irqbalance`, `udp2raw` |
 
 ---
 
@@ -53,7 +54,7 @@ sudo ./wireguard_installer.sh
 
 ---
 
-## 🎮 Management Menu (v2.1)
+## 🎮 Management Menu (v2.2)
 
 Once installed, running the script again will open the **WireGuard Manager**:
 1. **Install WireGuard:** Initial setup.
@@ -62,14 +63,26 @@ Once installed, running the script again will open the **WireGuard Manager**:
 4. **Monitor Connections:** View real-time traffic and connection status.
 5. **Run Speed Test:** Check your server's upload and download speeds.
 6. **Apply Performance Tuning:** Optimize network stack (GSO, IRQ, BBR).
-7. **Uninstall:** Completely remove the VPN from your system.
+7. **Toggle Stealth Mode:** Enable/Disable **udp2raw** obfuscation.
+8. **Uninstall:** Completely remove the VPN from your system.
+
+---
+
+## 🕵️ How Stealth Mode Works
+
+Stealth Mode uses **udp2raw** to tunnel WireGuard's UDP traffic over a fake TCP connection. This makes your VPN traffic look like standard HTTPS (if using port 443), helping you bypass strict network restrictions.
+
+**Client Setup for Stealth Mode:**
+1. Enable Stealth Mode in the script menu.
+2. On your client device, run the `udp2raw` client.
+3. Update your WireGuard client config to point to `127.0.0.1` instead of the server's public IP.
 
 ---
 
 ## ⚠️ Important Considerations
 
-*   **Firewall:** Ensure UDP port `51820` is open on your server's firewall.
-*   **Performance Tuning:** The tuning option is optional and recommended for high-speed servers to reduce CPU overhead.
+*   **Firewall:** Ensure UDP port `51820` (standard) or your chosen Stealth Port (e.g., `443` TCP) is open.
+*   **Performance Tuning:** Recommended for high-speed servers to reduce CPU overhead.
 *   **Security:** Automated updates are enabled by default to keep your server patched.
 
 ---
@@ -79,8 +92,8 @@ Once installed, running the script again will open the **WireGuard Manager**:
 | Issue | Solution |
 | :--- | :--- |
 | **No Connection** | Check if UDP port `51820` is open: `sudo ufw allow 51820/udp` |
+| **Stealth Mode Fails** | Ensure the Stealth Port (e.g., 443) is not being used by another service like Nginx. |
 | **No Internet** | Verify IP forwarding: `sysctl net.ipv4.ip_forward` should be `1`. |
-| **DNS Issues** | Try switching to Google (8.8.8.8) or Cloudflare (1.1.1.1) in the client config. |
 
 ---
 

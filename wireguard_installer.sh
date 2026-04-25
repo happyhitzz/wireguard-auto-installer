@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # =================================================================
-# WireGuard Advanced Auto-Installer (v2.1)
+# WireGuard Advanced Auto-Installer (v2.2)
 # =================================================================
 # Features:
 # - OS Detection (Ubuntu, Debian, CentOS, Fedora)
@@ -12,6 +12,7 @@
 # - Real-time Connection Monitoring
 # - Built-in Speed Test
 # - Optional Performance Tuning (GSO, IRQ, Kernel Tweaks)
+# - Optional Stealth Mode (Obfuscation via udp2raw)
 # - Uninstaller
 # =================================================================
 
@@ -20,6 +21,8 @@ WG_DIR="/etc/wireguard"
 WG_CONF="$WG_DIR/wg0.conf"
 WG_PORT="51820"
 WG_PROTO="udp"
+STEALTH_PORT="443"
+STEALTH_PASS="mypassword123"
 
 # --- Colors for Output ---
 RED='\033[0;31m'
@@ -56,13 +59,13 @@ install_wg() {
     echo -e "${YELLOW}Installing WireGuard and essential tools...${NC}"
     case $OS in
         ubuntu|debian)
-            apt update && apt install -y wireguard qrencode curl iptables unattended-upgrades ethtool irqbalance
+            apt update && apt install -y wireguard qrencode curl iptables unattended-upgrades ethtool irqbalance wget tar
             # Enable unattended upgrades for security
             dpkg-reconfigure -plow unattended-upgrades
             ;;
         centos|fedora)
             dnf install -y epel-release
-            dnf install -y wireguard-tools qrencode curl iptables dnf-automatic ethtool irqbalance
+            dnf install -y wireguard-tools qrencode curl iptables dnf-automatic ethtool irqbalance wget tar
             # Enable automatic security updates
             sed -i 's/upgrade_type = default/upgrade_type = security/' /etc/dnf/automatic.conf
             systemctl enable --now dnf-automatic.timer
@@ -156,6 +159,14 @@ EOF
 
     echo -e "${GREEN}Client '$CLIENT_NAME' added!${NC}"
     echo -e "Config saved to: $CLIENT_CONF_FILE"
+    
+    # Check if Stealth Mode is active
+    if pgrep -x "udp2raw" > /dev/null; then
+        echo -e "${YELLOW}Stealth Mode is ACTIVE. Use the following for client setup:${NC}"
+        echo -e "1. Run udp2raw on your client: udp2raw -c -l 127.0.0.1:51820 -r $SERVER_IP:$STEALTH_PORT -k \"$STEALTH_PASS\" --raw-mode faketcp"
+        echo -e "2. Change Endpoint in your config to: 127.0.0.1:51820"
+    fi
+
     echo -e "${YELLOW}QR Code for mobile setup:${NC}"
     qrencode -t ansiutf8 < "$CLIENT_CONF_FILE"
 }
@@ -185,36 +196,59 @@ run_speedtest() {
 apply_performance_tuning() {
     echo -e "${YELLOW}Applying Performance Optimizations...${NC}"
     
-    # 1. GSO (Generic Segmentation Offloading) Tuning
-    # Disabling GSO can sometimes improve throughput for WireGuard by reducing fragmentation overhead
     INTERFACE=$(ip route get 8.8.8.8 | awk '{print $5; exit}')
     if [[ -n "$INTERFACE" ]]; then
-        echo -e "Tuning interface: $INTERFACE"
         ethtool -K "$INTERFACE" gso off gro off tso off &> /dev/null
         echo -e "${GREEN}GSO/GRO/TSO offloading disabled for $INTERFACE.${NC}"
     fi
 
-    # 2. IRQ Balance
     systemctl enable --now irqbalance &> /dev/null
-    echo -e "${GREEN}IRQ Balance service enabled.${NC}"
-
-    # 3. Kernel Network Stack Tweaks
+    
     cat <<EOF > /etc/sysctl.d/99-wg-performance.conf
-# Increase max receive/send buffer sizes
 net.core.rmem_max = 16777216
 net.core.wmem_max = 16777216
 net.ipv4.tcp_rmem = 4096 87380 16777216
 net.ipv4.tcp_wmem = 4096 65536 16777216
-# Increase max backlog
 net.core.netdev_max_backlog = 10000
-# Optimize for high throughput
 net.ipv4.tcp_congestion_control = bbr
 net.core.default_qdisc = fq
 EOF
     sysctl -p /etc/sysctl.d/99-wg-performance.conf &> /dev/null
-    echo -e "${GREEN}Kernel network stack optimized (BBR enabled).${NC}"
-    
     echo -e "${GREEN}Performance tuning complete!${NC}"
+}
+
+setup_stealth_mode() {
+    echo -e "${YELLOW}Setting up Stealth Mode (udp2raw)...${NC}"
+    
+    if pgrep -x "udp2raw" > /dev/null; then
+        echo -e "${YELLOW}Stealth Mode is already running.${NC}"
+        read -p "Do you want to stop it? [y/N]: " STOP_STEALTH
+        if [[ $STOP_STEALTH == "y" || $STOP_STEALTH == "Y" ]]; then
+            pkill udp2raw
+            echo -e "${GREEN}Stealth Mode stopped.${NC}"
+        fi
+        return
+    fi
+
+    # Download udp2raw
+    if [[ ! -f /usr/local/bin/udp2raw ]]; then
+        echo -e "Downloading udp2raw..."
+        wget https://github.com/wangyu-/udp2raw/releases/download/20230206.0/udp2raw_binaries.tar.gz -O /tmp/udp2raw.tar.gz
+        tar -xvf /tmp/udp2raw.tar.gz -C /tmp/
+        cp /tmp/udp2raw_amd64 /usr/local/bin/udp2raw
+        chmod +x /usr/local/bin/udp2raw
+    fi
+
+    read -p "Enter Stealth Port (default 443): " USER_PORT
+    STEALTH_PORT=${USER_PORT:-$STEALTH_PORT}
+    read -p "Enter Stealth Password (default mypassword123): " USER_PASS
+    STEALTH_PASS=${USER_PASS:-$STEALTH_PASS}
+
+    # Start udp2raw in background
+    nohup udp2raw -s -l 0.0.0.0:$STEALTH_PORT -r 127.0.0.1:$WG_PORT -k "$STEALTH_PASS" --raw-mode faketcp > /var/log/udp2raw.log 2>&1 &
+    
+    echo -e "${GREEN}Stealth Mode started on port $STEALTH_PORT!${NC}"
+    echo -e "Traffic is now obfuscated as FakeTCP."
 }
 
 uninstall_wg() {
@@ -222,9 +256,11 @@ uninstall_wg() {
     if [[ $CONFIRM == "y" || $CONFIRM == "Y" ]]; then
         systemctl stop wg-quick@wg0
         systemctl disable wg-quick@wg0
+        pkill udp2raw &> /dev/null
         rm -rf $WG_DIR
         rm /etc/sysctl.d/99-wireguard.conf
         rm /etc/sysctl.d/99-wg-performance.conf &> /dev/null
+        rm /usr/local/bin/udp2raw &> /dev/null
         echo -e "${GREEN}WireGuard has been uninstalled.${NC}"
     fi
 }
@@ -232,16 +268,17 @@ uninstall_wg() {
 # --- Menu ---
 
 show_menu() {
-    echo -e "\n${GREEN}--- WireGuard Manager (v2.1) ---${NC}"
+    echo -e "\n${GREEN}--- WireGuard Manager (v2.2) ---${NC}"
     echo "1) Install WireGuard"
     echo "2) Add New Client"
     echo "3) List Clients"
     echo "4) Monitor Connections"
     echo "5) Run Speed Test"
-    echo "6) Apply Performance Tuning (GSO, IRQ, BBR)"
-    echo "7) Uninstall WireGuard"
-    echo "8) Exit"
-    read -p "Select an option [1-8]: " OPTION
+    echo "6) Apply Performance Tuning"
+    echo "7) Toggle Stealth Mode (Obfuscation)"
+    echo "8) Uninstall WireGuard"
+    echo "9) Exit"
+    read -p "Select an option [1-9]: " OPTION
 }
 
 # --- Main ---
@@ -261,8 +298,9 @@ else
             4) monitor_connections ;;
             5) run_speedtest ;;
             6) apply_performance_tuning ;;
-            7) uninstall_wg; exit 0 ;;
-            8) exit 0 ;;
+            7) setup_stealth_mode ;;
+            8) uninstall_wg; exit 0 ;;
+            9) exit 0 ;;
             *) echo -e "${RED}Invalid option.${NC}" ;;
         esac
     done
