@@ -12,6 +12,41 @@ This script provides a **streamlined and automated solution** for deploying a Wi
 *   **Cutting-Edge Encryption:** 🔒 Utilizes WireGuard's built-in, modern cryptographic suite (ChaCha20-Poly1305) for robust security.
 *   **Effortless Client Configuration:** 📱 Generates client configuration files and convenient QR codes for quick setup on your devices.
 
+## 🛠️ System Requirements & Prerequisites
+
+Before running the WireGuard auto-installer script, ensure your system meets the following requirements and has the necessary tools installed:
+
+*   **Operating System:** A fresh installation of one of the following Linux distributions:
+    *   Ubuntu (20.04 LTS or newer)
+    *   Debian (10 Buster or newer)
+    *   CentOS (7 or newer)
+    *   Fedora (32 or newer)
+*   **Root/Sudo Privileges:** The script requires `sudo` access to install packages and configure system settings.
+*   **Essential Utilities:** The following command-line tools are required for the script to function correctly. Most are pre-installed on modern Linux distributions, but you can install them if missing:
+    *   `wget`: Used to download the script.
+        ```bash
+        # Debian/Ubuntu
+        sudo apt update && sudo apt install -y wget
+        # CentOS/Fedora
+        sudo dnf install -y wget
+        ```
+    *   `curl`: Used to detect the server's public IP address.
+        ```bash
+        # Debian/Ubuntu
+        sudo apt update && sudo apt install -y curl
+        # CentOS/Fedora
+        sudo dnf install -y curl
+        ```
+    *   `qrencode`: Used to generate QR codes for client configurations.
+        ```bash
+        # Debian/Ubuntu
+        sudo apt update && sudo apt install -y qrencode
+        # CentOS/Fedora
+        sudo dnf install -y qrencode
+        ```
+    *   `iptables`: For firewall rules (usually pre-installed).
+    *   `systemctl`: For managing system services (standard on systemd-based distros).
+
 ## ⚡ Quick Start
 
 Follow these simple steps to get your WireGuard VPN server installed:
