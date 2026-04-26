@@ -52,6 +52,23 @@ Choose an option:
 
 Use this menu to easily manage your WireGuard clients.
 
+---
+
+## 🛡️ Recommended Hosting (DDoS Protected)
+
+For the best VPN experience, we recommend using hosting providers that offer robust, network-level DDoS protection to keep your server online.
+
+| Provider | DDoS Protection | Best For |
+| :--- | :--- | :--- |
+| [**Hostinger**](https://www.hostinger.com/) | Advanced WAF & Network-level | Budget-friendly & High Performance |
+| [**KnownHost**](https://www.knownhost.com/) | Enterprise-grade Imunify360 | Fully Managed & High Reliability |
+| [**Contabo**](https://contabo.com/) | Always-on Network Protection | Best Price-to-Performance Ratio |
+| [**Liquid Web**](https://www.liquidweb.com/) | Proactive Monitoring & Shield | Enterprise & Compliance Needs |
+| [**Vultr**](https://www.vultr.com/) | Optional Advanced Mitigation | Global Reach & Developer Friendly |
+| [**DigitalOcean**](https://www.digitalocean.com/) | Cloud-level Protection | Simplicity & Ease of Use |
+
+---
+
 ## ⚠️ Important Notes
 
 *   This script is designed for a fresh installation on a clean server.
