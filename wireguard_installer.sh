@@ -1,46 +1,74 @@
 #!/bin/bash
 
-# Simple WireGuard Installer
-# This script automates the installation of WireGuard and generates a client configuration.
+# Fully Automated WireGuard Installer with Interactive Options
+# This script automates WireGuard installation, server configuration, and client management.
 
-# --- Configuration Variables ---
+# --- Configuration Variables (Defaults) ---
 WG_NIC="wg0"
-WG_PORT="51820"
-WG_IPV4="10.0.0.1/24"
-WG_CLIENT_IPV4="10.0.0.2/32"
-WG_DNS="1.1.1.1"
+DEFAULT_WG_PORT="51820"
+DEFAULT_WG_IPV4="10.0.0.1/24"
+DEFAULT_WG_DNS="1.1.1.1"
+
+# --- Colors for better output ---
+RED=\033[0;31m
+GREEN=\033[0;32m
+YELLOW=\033[0;33m
+BLUE=\033[0;34m
+NC=\033[0m # No Color
 
 # --- Functions ---
 
-function install_wireguard() {
-    echo "Installing WireGuard..."
-    # Detect OS and install WireGuard
-    if [[ -f /etc/debian_version ]]; then
-        # Debian/Ubuntu
-        apt update && apt install -y wireguard qrencode
-    elif [[ -f /etc/redhat-release ]]; then
-        # CentOS/Fedora
-        yum install -y epel-release && yum install -y wireguard-tools qrencode
-    else
-        echo "Unsupported OS. Please install WireGuard manually." >&2
+function check_root() {
+    if [[ "$(id -u)" -ne 0 ]]; then
+        echo -e "${RED}This script must be run as root.${NC}" >&2
         exit 1
     fi
-    echo "WireGuard installed successfully."
+}
+
+function detect_os() {
+    if [[ -f /etc/debian_version ]]; then
+        OS="debian"
+    elif [[ -f /etc/redhat-release ]]; then
+        OS="redhat"
+    else
+        echo -e "${RED}Unsupported OS. Please install WireGuard manually.${NC}" >&2
+        exit 1
+    fi
+    echo -e "${GREEN}Detected OS: ${OS}${NC}"
+}
+
+function install_wireguard() {
+    echo -e "${BLUE}Installing WireGuard and dependencies...${NC}"
+    if [[ "$OS" == "debian" ]]; then
+        apt update && apt install -y wireguard qrencode curl
+    elif [[ "$OS" == "redhat" ]]; then
+        yum install -y epel-release && yum install -y wireguard-tools qrencode curl
+    fi
+    echo -e "${GREEN}WireGuard and dependencies installed successfully.${NC}"
+}
+
+function get_public_ip() {
+    SERVER_PUB_IP=$(curl -s ifconfig.me)
+    if [[ -z "$SERVER_PUB_IP" ]]; then
+        echo -e "${RED}Could not detect public IP. Please ensure curl is installed and working.${NC}" >&2
+        exit 1
+    fi
+    echo -e "${GREEN}Detected Public IP: ${SERVER_PUB_IP}${NC}"
 }
 
 function generate_keys() {
-    echo "Generating server and client keys..."
+    echo -e "${BLUE}Generating server keys...${NC}"
     SERVER_PRIVKEY=$(wg genkey)
     SERVER_PUBKEY=$(echo "$SERVER_PRIVKEY" | wg pubkey)
-    CLIENT_PRIVKEY=$(wg genkey)
-    CLIENT_PUBKEY=$(echo "$CLIENT_PRIVKEY" | wg pubkey)
-    echo "Keys generated."
+    echo -e "${GREEN}Server keys generated.${NC}"
 }
 
 function configure_server() {
-    echo "Configuring WireGuard server..."
-    # Get public IP
-    SERVER_PUB_IP=$(curl -s ifconfig.me)
+    echo -e "${BLUE}Configuring WireGuard server...${NC}"
+
+    # Prompt for WireGuard Port
+    read -p "Enter WireGuard listening port (default: $DEFAULT_WG_PORT): " WG_PORT
+    WG_PORT=${WG_PORT:-$DEFAULT_WG_PORT}
 
     # Create server config
     cat <<EOF > /etc/wireguard/$WG_NIC.conf
@@ -50,10 +78,6 @@ Address = $WG_IPV4
 ListenPort = $WG_PORT
 PostUp = iptables -A FORWARD -i $WG_NIC -j ACCEPT; iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
 PostDown = iptables -D FORWARD -i $WG_NIC -j ACCEPT; iptables -t nat -D POSTROUTING -o eth0 -j MASQUERADE
-
-[Peer]
-PublicKey = $CLIENT_PUBKEY
-AllowedIPs = $WG_CLIENT_IPV4
 EOF
 
     # Enable IP forwarding
@@ -63,15 +87,52 @@ EOF
     # Start WireGuard
     systemctl enable wg-quick@$WG_NIC
     systemctl start wg-quick@$WG_NIC
-    echo "WireGuard server configured and started."
+    echo -e "${GREEN}WireGuard server configured and started on port ${WG_PORT}.${NC}"
 }
 
-function generate_client_config() {
-    echo "Generating client configuration..."
-    cat <<EOF > client_wg0.conf
+function add_client() {
+    echo -e "${BLUE}Adding a new WireGuard client...${NC}"
+
+    read -p "Enter client name (e.g., 'phone', 'laptop'): " CLIENT_NAME
+    if [[ -z "$CLIENT_NAME" ]]; then
+        echo -e "${RED}Client name cannot be empty. Aborting.${NC}" >&2
+        return 1
+    fi
+
+    # Generate client keys
+    CLIENT_PRIVKEY=$(wg genkey)
+    CLIENT_PUBKEY=$(echo "$CLIENT_PRIVKEY" | wg pubkey)
+
+    # Determine next available client IP
+    LAST_IP=$(grep "AllowedIPs" /etc/wireguard/$WG_NIC.conf | tail -1 | awk -F'[./]' '{print $4}')
+    if [[ -z "$LAST_IP" ]]; then
+        CLIENT_IPV4="10.0.0.2/32"
+    else
+        CLIENT_IPV4="10.0.0.$((LAST_IP + 1))/32"
+    fi
+
+    # Prompt for DNS
+    read -p "Enter DNS server for client (default: $DEFAULT_WG_DNS): " WG_DNS
+    WG_DNS=${WG_DNS:-$DEFAULT_WG_DNS}
+
+    # Add client to server config
+    cat <<EOF >> /etc/wireguard/$WG_NIC.conf
+
+[Peer]
+# Client Name: $CLIENT_NAME
+PublicKey = $CLIENT_PUBKEY
+AllowedIPs = $CLIENT_IPV4
+EOF
+
+    # Restart WireGuard to apply changes
+    systemctl restart wg-quick@$WG_NIC
+
+    # Generate client config file
+    CLIENT_CONFIG_FILE="${CLIENT_NAME}_wg0.conf"
+    cat <<EOF > "$CLIENT_CONFIG_FILE"
 [Interface]
 PrivateKey = $CLIENT_PRIVKEY
-Address = $WG_CLIENT_IPV4
+Address = $CLIENT_IPV4
 DNS = $WG_DNS
 
 [Peer]
@@ -81,23 +142,87 @@ AllowedIPs = 0.0.0.0/0, ::/0
 PersistentKeepalive = 25
 EOF
 
-    echo "Client configuration saved to client_wg0.conf"
-    echo "QR Code for client_wg0.conf:"
-    qrencode -t ansiutf8 < client_wg0.conf
+    echo -e "${GREEN}Client '${CLIENT_NAME}' added successfully!${NC}"
+    echo -e "${YELLOW}Client configuration saved to '${CLIENT_CONFIG_FILE}'${NC}"
+    echo -e "${BLUE}QR Code for '${CLIENT_CONFIG_FILE}':${NC}"
+    qrencode -t ansiutf8 < "$CLIENT_CONFIG_FILE"
+}
+
+function remove_client() {
+    echo -e "${BLUE}Removing a WireGuard client...${NC}"
+    # List current clients
+    echo -e "${YELLOW}Current Clients:${NC}"
+    grep "# Client Name:" /etc/wireguard/$WG_NIC.conf | sed 's/# Client Name: //'
+
+    read -p "Enter the name of the client to remove: " CLIENT_TO_REMOVE
+    if [[ -z "$CLIENT_TO_REMOVE" ]]; then
+        echo -e "${RED}Client name cannot be empty. Aborting.${NC}" >&2
+        return 1
+    fi
+
+    # Remove client from server config
+    sed -i "/Client Name: ${CLIENT_TO_REMOVE}/,/^$/d" /etc/wireguard/$WG_NIC.conf
+
+    # Restart WireGuard
+    systemctl restart wg-quick@$WG_NIC
+    echo -e "${GREEN}Client '${CLIENT_TO_REMOVE}' removed successfully.${NC}"
+}
+
+function show_menu() {
+    echo -e "\n${BLUE}--- WireGuard Management Menu ---${NC}"
+    echo -e "${YELLOW}1) Add New Client${NC}"
+    echo -e "${YELLOW}2) Remove Client${NC}"
+    echo -e "${YELLOW}3) Show All Client Configs (QR Codes)${NC}"
+    echo -e "${YELLOW}4) Exit${NC}"
+    read -p "Choose an option: " OPTION
+
+    case $OPTION in
+        1)
+            add_client
+            ;;
+        2)
+            remove_client
+            ;;
+        3)
+            echo -e "${BLUE}Showing all client configurations:${NC}"
+            for CLIENT_FILE in *_wg0.conf; do
+                if [[ -f "$CLIENT_FILE" ]]; then
+                    echo -e "\n${YELLOW}--- ${CLIENT_FILE} ---${NC}"
+                    qrencode -t ansiutf8 < "$CLIENT_FILE"
+                fi
+            done
+            ;;
+        4)
+            echo -e "${GREEN}Exiting WireGuard Management. Goodbye!${NC}"
+            exit 0
+            ;;
+        *)
+            echo -e "${RED}Invalid option. Please try again.${NC}"
+            ;;
+    esac
 }
 
 # --- Main Script Execution ---
 
-if [[ "$(id -u)" -ne 0 ]]; then
-    echo "This script must be run as root." >&2
-    exit 1
+check_root
+detect_os
+get_public_ip
+
+# Check if WireGuard is already installed and configured
+if [[ -f /etc/wireguard/$WG_NIC.conf ]]; then
+    echo -e "${YELLOW}WireGuard appears to be already installed and configured.${NC}"
+    echo -e "${YELLOW}Entering management mode...${NC}"
+    while true; do
+        show_menu
+    done
+else
+    install_wireguard
+    generate_keys
+    configure_server
+    add_client # Add first client after initial setup
+    echo -e "\n${GREEN}WireGuard initial setup complete!${NC}"
+    echo -e "${YELLOW}Entering management mode...${NC}"
+    while true; do
+        show_menu
+    done
 fi
-
-install_wireguard
-generate_keys
-configure_server
-generate_client_config
-
-echo "\nWireGuard installation complete!"
-echo "Your client configuration is in client_wg0.conf and displayed as a QR code above."
-echo "Use this file or QR code to connect your client device."
