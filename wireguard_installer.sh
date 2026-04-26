@@ -2,19 +2,21 @@
 
 # Fully Automated WireGuard Installer with Interactive Options
 # This script automates WireGuard installation, server configuration, and client management.
+# Version: 1.1 (Ad-Block & Advanced Features)
 
 # --- Configuration Variables (Defaults) ---
 WG_NIC="wg0"
 DEFAULT_WG_PORT="51820"
 DEFAULT_WG_IPV4="10.0.0.1/24"
 DEFAULT_WG_DNS="1.1.1.1"
+ADBLOCK_DNS="94.140.14.14" # AdGuard DNS as a lightweight ad-blocking option
 
 # --- Colors for better output ---
-RED=\033[0;31m
-GREEN=\033[0;32m
-YELLOW=\033[0;33m
-BLUE=\033[0;34m
-NC=\033[0m # No Color
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
 
 # --- Functions ---
 
@@ -40,9 +42,9 @@ function detect_os() {
 function install_wireguard() {
     echo -e "${BLUE}Installing WireGuard and dependencies...${NC}"
     if [[ "$OS" == "debian" ]]; then
-        apt update && apt install -y wireguard qrencode curl
+        apt update && apt install -y wireguard qrencode curl iptables
     elif [[ "$OS" == "redhat" ]]; then
-        yum install -y epel-release && yum install -y wireguard-tools qrencode curl
+        yum install -y epel-release && yum install -y wireguard-tools qrencode curl iptables
     fi
     echo -e "${GREEN}WireGuard and dependencies installed successfully.${NC}"
 }
@@ -70,14 +72,17 @@ function configure_server() {
     read -p "Enter WireGuard listening port (default: $DEFAULT_WG_PORT): " WG_PORT
     WG_PORT=${WG_PORT:-$DEFAULT_WG_PORT}
 
+    # Detect primary interface
+    SERVER_NIC=$(ip route get 8.8.8.8 | awk -- '{printf $5}')
+
     # Create server config
     cat <<EOF > /etc/wireguard/$WG_NIC.conf
 [Interface]
 PrivateKey = $SERVER_PRIVKEY
-Address = $WG_IPV4
+Address = $DEFAULT_WG_IPV4
 ListenPort = $WG_PORT
-PostUp = iptables -A FORWARD -i $WG_NIC -j ACCEPT; iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
-PostDown = iptables -D FORWARD -i $WG_NIC -j ACCEPT; iptables -t nat -D POSTROUTING -o eth0 -j MASQUERADE
+PostUp = iptables -A FORWARD -i $WG_NIC -j ACCEPT; iptables -t nat -A POSTROUTING -o $SERVER_NIC -j MASQUERADE
+PostDown = iptables -D FORWARD -i $WG_NIC -j ACCEPT; iptables -t nat -D POSTROUTING -o $SERVER_NIC -j MASQUERADE
 EOF
 
     # Enable IP forwarding
@@ -111,9 +116,20 @@ function add_client() {
         CLIENT_IPV4="10.0.0.$((LAST_IP + 1))/32"
     fi
 
-    # Prompt for DNS
-    read -p "Enter DNS server for client (default: $DEFAULT_WG_DNS): " WG_DNS
-    WG_DNS=${WG_DNS:-$DEFAULT_WG_DNS}
+    # Feature Options
+    echo -e "\n${BLUE}--- Client Options ---${NC}"
+    echo -e "1) Standard DNS (Cloudflare: 1.1.1.1)"
+    echo -e "2) Ad-Blocking DNS (AdGuard: 94.140.14.14)"
+    echo -e "3) Custom DNS"
+    read -p "Choose DNS option (default: 1): " DNS_CHOICE
+    DNS_CHOICE=${DNS_CHOICE:-1}
+
+    case $DNS_CHOICE in
+        1) WG_DNS="1.1.1.1" ;;
+        2) WG_DNS="$ADBLOCK_DNS" ;;
+        3) read -p "Enter custom DNS: " WG_DNS ;;
+        *) WG_DNS="1.1.1.1" ;;
+    esac
 
     # Add client to server config
     cat <<EOF >> /etc/wireguard/$WG_NIC.conf
@@ -129,6 +145,8 @@ EOF
 
     # Generate client config file
     CLIENT_CONFIG_FILE="${CLIENT_NAME}_wg0.conf"
+    WG_PORT=$(grep "ListenPort" /etc/wireguard/$WG_NIC.conf | awk '{print $3}')
+    
     cat <<EOF > "$CLIENT_CONFIG_FILE"
 [Interface]
 PrivateKey = $CLIENT_PRIVKEY
@@ -170,7 +188,7 @@ function remove_client() {
 
 function show_menu() {
     echo -e "\n${BLUE}--- WireGuard Management Menu ---${NC}"
-    echo -e "${YELLOW}1) Add New Client${NC}"
+    echo -e "${YELLOW}1) Add New Client (with Ad-Block option)${NC}"
     echo -e "${YELLOW}2) Remove Client${NC}"
     echo -e "${YELLOW}3) Show All Client Configs (QR Codes)${NC}"
     echo -e "${YELLOW}4) Exit${NC}"
