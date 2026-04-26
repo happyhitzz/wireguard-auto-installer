@@ -1,4 +1,4 @@
-# 🚀 WireGuard Automated Installer (v1.2) - Interactive Edition
+# 🚀 WireGuard Automated Installer (v1.3) - Interactive Edition
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Bash](https://img.shields.io/badge/Language-Bash-4EAA25.svg)](https://www.gnu.org/software/bash/)
@@ -21,7 +21,7 @@ This script provides a fully automated and interactive way to install and manage
     *   **Server Status:** View real-time connection status, data usage, and latest handshakes.
 *   **Automatic OS Detection:** Supports Debian/Ubuntu and CentOS/Fedora.
 *   **Smart Interface Detection:** Automatically detects the primary network interface for firewall rules.
-*   **Public IP Detection:** Automatically detects your server's public IP address.
+*   **Public IP Detection:** Automatically detects your server\'s public IP address.
 *   **QR Code Generation:** Generates QR codes for client configurations for easy mobile setup.
 
 ---
@@ -38,7 +38,7 @@ wget https://raw.githubusercontent.com/happyhitzz/wireguard-auto-installer/main/
 
 1.  The script will automatically detect your OS and public IP.
 2.  You will be prompted to enter your desired WireGuard listening port (default: `51820`).
-3.  The server will be configured, and you'll be asked to add your first client.
+3.  The server will be configured, and you\'ll be asked to add your first client.
 4.  **New in v1.1:** You can now select **Ad-Blocking DNS** during client creation.
 5.  A client configuration file (`<client_name>_wg0.conf`) and its QR code will be generated.
 
@@ -57,6 +57,19 @@ After the initial setup, or if WireGuard is already installed, the script will p
 7) Exit
 Choose an option:
 ```
+
+---
+
+## ✅ Code Review & Optimizations (v1.3)
+
+This version includes significant improvements for robustness, security, and user experience:
+
+*   **Enhanced Input Validation:** Strict checks for WireGuard port numbers and custom DNS entries prevent misconfigurations.
+*   **Robust Interface Detection:** Improved logic for detecting the primary network interface ensures  rules are correctly applied.
+*   **Unique Client Names:** Prevents creation of clients with duplicate names, avoiding configuration conflicts.
+*   **Reliable Client Listing:** The  function now uses  for more accurate and consistent client status reporting.
+*   **Precise Client Toggling:** The  function more accurately identifies and comments/uncomments entire client configurations, ensuring proper enabling/disabling.
+*   **Detailed Server Status:** The  function provides a clearer overview of active connections, including data transfer statistics.
 
 ---
 

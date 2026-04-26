@@ -2,7 +2,7 @@
 
 # Fully Automated WireGuard Installer with Interactive Options
 # This script automates WireGuard installation, server configuration, and client management.
-# Version: 1.2 (Advanced Client Management)
+# Version: 1.3 (Code Review & Optimizations)
 
 # --- Configuration Variables (Defaults) ---
 WG_NIC="wg0"
@@ -12,11 +12,11 @@ DEFAULT_WG_DNS="1.1.1.1"
 ADBLOCK_DNS="94.140.14.14" # AdGuard DNS as a lightweight ad-blocking option
 
 # --- Colors for better output ---
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[0;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+RED=\'\\033[0;31m\'
+GREEN=\'\\033[0;32m\'
+YELLOW=\'\\033[0;33m\'
+BLUE=\'\\033[0;34m\'
+NC=\'\\033[0m\' # No Color
 
 # --- Functions ---
 
@@ -69,11 +69,22 @@ function configure_server() {
     echo -e "${BLUE}Configuring WireGuard server...${NC}"
 
     # Prompt for WireGuard Port
-    read -p "Enter WireGuard listening port (default: $DEFAULT_WG_PORT): " WG_PORT
-    WG_PORT=${WG_PORT:-$DEFAULT_WG_PORT}
+    while true; do
+        read -p "Enter WireGuard listening port (default: $DEFAULT_WG_PORT): " WG_PORT
+        WG_PORT=${WG_PORT:-$DEFAULT_WG_PORT}
+        if [[ "$WG_PORT" =~ ^[0-9]+$ ]] && ((WG_PORT > 0 && WG_PORT < 65536)); then
+            break
+        else
+            echo -e "${RED}Invalid port number. Please enter a number between 1 and 65535.${NC}"
+        fi
+    done
 
     # Detect primary interface
-    SERVER_NIC=$(ip route get 8.8.8.8 | awk -- '{printf $5}')
+    SERVER_NIC=$(ip route get 8.8.8.8 | awk -- \'{printf $5}\')
+    if [[ -z "$SERVER_NIC" ]]; then
+        echo -e "${RED}Could not detect primary network interface. Please check network configuration.${NC}" >&2
+        exit 1
+    fi
 
     # Create server config
     cat <<EOF > /etc/wireguard/$WG_NIC.conf
@@ -98,9 +109,15 @@ EOF
 function add_client() {
     echo -e "${BLUE}Adding a new WireGuard client...${NC}"
 
-    read -p "Enter client name (e.g., 'phone', 'laptop'): " CLIENT_NAME
+    read -p "Enter client name (e.g., \'phone\', \'laptop\'): " CLIENT_NAME
     if [[ -z "$CLIENT_NAME" ]]; then
         echo -e "${RED}Client name cannot be empty. Aborting.${NC}" >&2
+        return 1
+    fi
+
+    # Check if client name already exists
+    if grep -q "# Client Name: $CLIENT_NAME" /etc/wireguard/$WG_NIC.conf; then
+        echo -e "${RED}Client name \'$CLIENT_NAME\' already exists. Please choose a different name.${NC}" >&2
         return 1
     fi
 
@@ -109,7 +126,7 @@ function add_client() {
     CLIENT_PUBKEY=$(echo "$CLIENT_PRIVKEY" | wg pubkey)
 
     # Determine next available client IP
-    LAST_IP=$(grep "AllowedIPs" /etc/wireguard/$WG_NIC.conf | tail -1 | awk -F'[./]' '{print $4}')
+    LAST_IP=$(grep "AllowedIPs" /etc/wireguard/$WG_NIC.conf | tail -1 | awk -F\'[/.]\' \'{print $4}\')
     if [[ -z "$LAST_IP" ]]; then
         CLIENT_IPV4="10.0.0.2/32"
     else
@@ -121,15 +138,22 @@ function add_client() {
     echo -e "1) Standard DNS (Cloudflare: 1.1.1.1)"
     echo -e "2) Ad-Blocking DNS (AdGuard: 94.140.14.14)"
     echo -e "3) Custom DNS"
-    read -p "Choose DNS option (default: 1): " DNS_CHOICE
-    DNS_CHOICE=${DNS_CHOICE:-1}
-
-    case $DNS_CHOICE in
-        1) WG_DNS="1.1.1.1" ;;
-        2) WG_DNS="$ADBLOCK_DNS" ;;
-        3) read -p "Enter custom DNS: " WG_DNS ;;
-        *) WG_DNS="1.1.1.1" ;;
-    esac
+    while true; do
+        read -p "Choose DNS option (default: 1): " DNS_CHOICE
+        DNS_CHOICE=${DNS_CHOICE:-1}
+        case $DNS_CHOICE in
+            1) WG_DNS="1.1.1.1"; break ;;
+            2) WG_DNS="$ADBLOCK_DNS"; break ;;
+            3) read -p "Enter custom DNS (e.g., 8.8.8.8): " CUSTOM_DNS
+               if [[ "$CUSTOM_DNS" =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
+                   WG_DNS="$CUSTOM_DNS"; break
+               else
+                   echo -e "${RED}Invalid DNS address. Please enter a valid IPv4 address.${NC}"
+               fi
+               ;;
+            *) echo -e "${RED}Invalid option. Please choose 1, 2, or 3.${NC}" ;;
+        esac
+    done
 
     # Add client to server config
     cat <<EOF >> /etc/wireguard/$WG_NIC.conf
@@ -145,7 +169,7 @@ EOF
 
     # Generate client config file
     CLIENT_CONFIG_FILE="${CLIENT_NAME}_wg0.conf"
-    WG_PORT=$(grep "ListenPort" /etc/wireguard/$WG_NIC.conf | awk '{print $3}')
+    WG_PORT=$(grep "ListenPort" /etc/wireguard/$WG_NIC.conf | awk \'{print $3}\')
     
     cat <<EOF > "$CLIENT_CONFIG_FILE"
 [Interface]
@@ -160,9 +184,9 @@ AllowedIPs = 0.0.0.0/0, ::/0
 PersistentKeepalive = 25
 EOF
 
-    echo -e "${GREEN}Client '${CLIENT_NAME}' added successfully!${NC}"
-    echo -e "${YELLOW}Client configuration saved to '${CLIENT_CONFIG_FILE}'${NC}"
-    echo -e "${BLUE}QR Code for '${CLIENT_CONFIG_FILE}':${NC}"
+    echo -e "${GREEN}Client \'${CLIENT_NAME}\' added successfully!${NC}"
+    echo -e "${YELLOW}Client configuration saved to \'${CLIENT_CONFIG_FILE}\'${NC}"
+    echo -e "${BLUE}QR Code for \'${CLIENT_CONFIG_FILE}\':${NC}"
     qrencode -t ansiutf8 < "$CLIENT_CONFIG_FILE"
 }
 
@@ -170,11 +194,17 @@ function remove_client() {
     echo -e "${BLUE}Removing a WireGuard client...${NC}"
     # List current clients
     echo -e "${YELLOW}Current Clients:${NC}"
-    grep "# Client Name:" /etc/wireguard/$WG_NIC.conf | sed 's/# Client Name: //'
+    grep "# Client Name:" /etc/wireguard/$WG_NIC.conf | sed \'s/# Client Name: //\'
 
     read -p "Enter the name of the client to remove: " CLIENT_TO_REMOVE
     if [[ -z "$CLIENT_TO_REMOVE" ]]; then
         echo -e "${RED}Client name cannot be empty. Aborting.${NC}" >&2
+        return 1
+    fi
+
+    # Check if client exists
+    if ! grep -q "# Client Name: $CLIENT_TO_REMOVE" /etc/wireguard/$WG_NIC.conf; then
+        echo -e "${RED}Client \'$CLIENT_TO_REMOVE\' not found.${NC}"
         return 1
     fi
 
@@ -183,7 +213,7 @@ function remove_client() {
 
     # Restart WireGuard
     systemctl restart wg-quick@$WG_NIC
-    echo -e "${GREEN}Client '${CLIENT_TO_REMOVE}' removed successfully.${NC}"
+    echo -e "${GREEN}Client \'${CLIENT_TO_REMOVE}\' removed successfully.${NC}"
 }
 
 function list_clients() {
@@ -191,14 +221,17 @@ function list_clients() {
     printf "%-20s %-20s %-10s\n" "Client Name" "Allowed IPs" "Status"
     echo "------------------------------------------------------------"
     
-    # Extract client names and IPs
-    grep -E "# Client Name:|AllowedIPs" /etc/wireguard/$WG_NIC.conf | while read -r line; do
+    # Parse wg showconf to get client details more reliably
+    wg showconf $WG_NIC | grep -E "^# Client Name:|^PublicKey|^AllowedIPs" | while read -r line; do
         if [[ $line == *"# Client Name:"* ]]; then
-            NAME=$(echo "$line" | sed 's/# Client Name: //')
+            NAME=$(echo "$line" | sed \'s/# Client Name: //\')
+        elif [[ $line == *"PublicKey"* ]]; then
+            PUBKEY=$(echo "$line" | awk \'{print $3}\')
         elif [[ $line == *"AllowedIPs"* ]]; then
-            IP=$(echo "$line" | awk '{print $3}')
-            # Check if commented out (disabled)
-            if [[ $line == "#"* ]]; then
+            IP=$(echo "$line" | awk \'{print $3}\')
+            # Check if the peer block is commented out (disabled)
+            # This is a heuristic, a more robust solution would involve parsing the entire config block
+            if grep -A 3 "# Client Name: $NAME" /etc/wireguard/$WG_NIC.conf | grep -q "^#\[Peer\]"; then
                 STATUS="${RED}Disabled${NC}"
             else
                 STATUS="${GREEN}Enabled${NC}"
@@ -220,20 +253,31 @@ function toggle_client() {
 
     # Check if client exists
     if ! grep -q "# Client Name: $CLIENT_NAME" /etc/wireguard/$WG_NIC.conf; then
-        echo -e "${RED}Client '$CLIENT_NAME' not found.${NC}"
+        echo -e "${RED}Client \'$CLIENT_NAME\' not found.${NC}"
         return 1
     fi
 
-    # Determine if currently enabled or disabled
-    # We look for the Peer block following the client name
-    if grep -A 3 "# Client Name: $CLIENT_NAME" /etc/wireguard/$WG_NIC.conf | grep -q "^\[Peer\]"; then
-        # Currently enabled, so disable it
-        echo -e "${YELLOW}Disabling client '$CLIENT_NAME'...${NC}"
-        sed -i "/# Client Name: $CLIENT_NAME/,/^$/ s/^\([^#]\)/#\1/" /etc/wireguard/$WG_NIC.conf
+    # Find the start and end lines of the client's Peer block
+    START_LINE=$(grep -n "# Client Name: $CLIENT_NAME" /etc/wireguard/$WG_NIC.conf | cut -d: -f1)
+    if [[ -z "$START_LINE" ]]; then
+        echo -e "${RED}Could not find client \'$CLIENT_NAME\' in configuration.${NC}"
+        return 1
+    fi
+
+    # Find the next empty line or the start of the next Peer block
+    END_LINE=$(grep -n -A 1 "# Client Name: $CLIENT_NAME" /etc/wireguard/$WG_NIC.conf | tail -n 1 | cut -d: -f1)
+    if [[ -z "$END_LINE" ]]; then
+        # If no empty line or next peer, assume it's the end of the file
+        END_LINE=$(wc -l < /etc/wireguard/$WG_NIC.conf)
+    fi
+
+    # Check if currently enabled (first line of Peer block is not commented)
+    if ! grep -q "^#\[Peer\]" /etc/wireguard/$WG_NIC.conf | grep -q -A $((END_LINE - START_LINE)) "# Client Name: $CLIENT_NAME"; then
+        echo -e "${YELLOW}Disabling client \'$CLIENT_NAME\'...${NC}"
+        sed -i "${START_LINE},${END_LINE}s/^/#/" /etc/wireguard/$WG_NIC.conf
     else
-        # Currently disabled, so enable it
-        echo -e "${YELLOW}Enabling client '$CLIENT_NAME'...${NC}"
-        sed -i "/# Client Name: $CLIENT_NAME/,/^$/ s/^#//" /etc/wireguard/$WG_NIC.conf
+        echo -e "${YELLOW}Enabling client \'$CLIENT_NAME\'...${NC}"
+        sed -i "${START_LINE},${END_LINE}s/^#//" /etc/wireguard/$WG_NIC.conf
     fi
 
     # Restart WireGuard
@@ -243,9 +287,9 @@ function toggle_client() {
 
 function show_status() {
     echo -e "\n${BLUE}--- WireGuard Server Status ---${NC}"
-    wg show
-    echo -e "\n${BLUE}--- Active Connections (Last Handshake) ---${NC}"
-    wg show $WG_NIC latest-handshakes
+    wg show $WG_NIC
+    echo -e "\n${BLUE}--- Active Connections (Last Handshake, Transfer) ---${NC}"
+    wg show $WG_NIC | grep -E "peer:|latest handshake:|transfer:" | sed -e \'s/peer: //g\' -e \'s/latest handshake: //g\' -e \'s/transfer: //g\' | paste -d\'\t\' - - - | awk \'{printf "%-40s %-25s %s\n", $1, $2, $3}\''
 }
 
 function show_menu() {
