@@ -1,4 +1,4 @@
-# 🚀 WireGuard Automated Installer (v1.1) - Interactive Edition
+# 🚀 WireGuard Automated Installer (v1.2) - Interactive Edition
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Bash](https://img.shields.io/badge/Language-Bash-4EAA25.svg)](https://www.gnu.org/software/bash/)
@@ -13,13 +13,15 @@ This script provides a fully automated and interactive way to install and manage
 *   **Fully Automated Installation:** Installs WireGuard and all necessary dependencies (qrencode, curl).
 *   **Interactive Setup:** Asks for your preferred WireGuard port and DNS server during initial setup.
 *   **🛡️ Ad-Blocking Options:** Choose between standard DNS, Ad-Blocking DNS (AdGuard), or custom DNS for each client.
+*   **Advanced Client Management:**
+    *   **Add New Client:** Easily create new client configurations with unique names and custom DNS settings.
+    *   **Remove Client:** Permanently remove existing clients.
+    *   **List All Clients:** View a summary of all clients, their IPs, and their current status (Enabled/Disabled).
+    *   **Enable/Disable Client:** Temporarily revoke access for a client without deleting their configuration.
+    *   **Server Status:** View real-time connection status, data usage, and latest handshakes.
 *   **Automatic OS Detection:** Supports Debian/Ubuntu and CentOS/Fedora.
 *   **Smart Interface Detection:** Automatically detects the primary network interface for firewall rules.
 *   **Public IP Detection:** Automatically detects your server's public IP address.
-*   **Client Management Menu:**
-    *   **Add New Client:** Easily create new client configurations with unique names and custom DNS settings.
-    *   **Remove Client:** Remove existing clients from your WireGuard server.
-    *   **Show All Client Configs:** View all generated client configurations and their QR codes.
 *   **QR Code Generation:** Generates QR codes for client configurations for easy mobile setup.
 
 ---
@@ -48,8 +50,11 @@ After the initial setup, or if WireGuard is already installed, the script will p
 --- WireGuard Management Menu ---
 1) Add New Client (with Ad-Block option)
 2) Remove Client
-3) Show All Client Configs (QR Codes)
-4) Exit
+3) List All Clients & Status
+4) Enable/Disable Client
+5) Show Server Status & Connections
+6) Show All Client Configs (QR Codes)
+7) Exit
 Choose an option:
 ```
 

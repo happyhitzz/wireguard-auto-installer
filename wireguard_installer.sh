@@ -2,7 +2,7 @@
 
 # Fully Automated WireGuard Installer with Interactive Options
 # This script automates WireGuard installation, server configuration, and client management.
-# Version: 1.1 (Ad-Block & Advanced Features)
+# Version: 1.2 (Advanced Client Management)
 
 # --- Configuration Variables (Defaults) ---
 WG_NIC="wg0"
@@ -186,22 +186,86 @@ function remove_client() {
     echo -e "${GREEN}Client '${CLIENT_TO_REMOVE}' removed successfully.${NC}"
 }
 
+function list_clients() {
+    echo -e "\n${BLUE}--- Current WireGuard Clients ---${NC}"
+    printf "%-20s %-20s %-10s\n" "Client Name" "Allowed IPs" "Status"
+    echo "------------------------------------------------------------"
+    
+    # Extract client names and IPs
+    grep -E "# Client Name:|AllowedIPs" /etc/wireguard/$WG_NIC.conf | while read -r line; do
+        if [[ $line == *"# Client Name:"* ]]; then
+            NAME=$(echo "$line" | sed 's/# Client Name: //')
+        elif [[ $line == *"AllowedIPs"* ]]; then
+            IP=$(echo "$line" | awk '{print $3}')
+            # Check if commented out (disabled)
+            if [[ $line == "#"* ]]; then
+                STATUS="${RED}Disabled${NC}"
+            else
+                STATUS="${GREEN}Enabled${NC}"
+            fi
+            printf "%-20s %-20s %-10b\n" "$NAME" "$IP" "$STATUS"
+        fi
+    done
+}
+
+function toggle_client() {
+    echo -e "${BLUE}Enable/Disable a WireGuard client...${NC}"
+    list_clients
+    
+    read -p "Enter the name of the client to toggle: " CLIENT_NAME
+    if [[ -z "$CLIENT_NAME" ]]; then
+        echo -e "${RED}Client name cannot be empty. Aborting.${NC}" >&2
+        return 1
+    fi
+
+    # Check if client exists
+    if ! grep -q "# Client Name: $CLIENT_NAME" /etc/wireguard/$WG_NIC.conf; then
+        echo -e "${RED}Client '$CLIENT_NAME' not found.${NC}"
+        return 1
+    fi
+
+    # Determine if currently enabled or disabled
+    # We look for the Peer block following the client name
+    if grep -A 3 "# Client Name: $CLIENT_NAME" /etc/wireguard/$WG_NIC.conf | grep -q "^\[Peer\]"; then
+        # Currently enabled, so disable it
+        echo -e "${YELLOW}Disabling client '$CLIENT_NAME'...${NC}"
+        sed -i "/# Client Name: $CLIENT_NAME/,/^$/ s/^\([^#]\)/#\1/" /etc/wireguard/$WG_NIC.conf
+    else
+        # Currently disabled, so enable it
+        echo -e "${YELLOW}Enabling client '$CLIENT_NAME'...${NC}"
+        sed -i "/# Client Name: $CLIENT_NAME/,/^$/ s/^#//" /etc/wireguard/$WG_NIC.conf
+    fi
+
+    # Restart WireGuard
+    systemctl restart wg-quick@$WG_NIC
+    echo -e "${GREEN}Client status updated.${NC}"
+}
+
+function show_status() {
+    echo -e "\n${BLUE}--- WireGuard Server Status ---${NC}"
+    wg show
+    echo -e "\n${BLUE}--- Active Connections (Last Handshake) ---${NC}"
+    wg show $WG_NIC latest-handshakes
+}
+
 function show_menu() {
     echo -e "\n${BLUE}--- WireGuard Management Menu ---${NC}"
     echo -e "${YELLOW}1) Add New Client (with Ad-Block option)${NC}"
     echo -e "${YELLOW}2) Remove Client${NC}"
-    echo -e "${YELLOW}3) Show All Client Configs (QR Codes)${NC}"
-    echo -e "${YELLOW}4) Exit${NC}"
+    echo -e "${YELLOW}3) List All Clients & Status${NC}"
+    echo -e "${YELLOW}4) Enable/Disable Client${NC}"
+    echo -e "${YELLOW}5) Show Server Status & Connections${NC}"
+    echo -e "${YELLOW}6) Show All Client Configs (QR Codes)${NC}"
+    echo -e "${YELLOW}7) Exit${NC}"
     read -p "Choose an option: " OPTION
 
     case $OPTION in
-        1)
-            add_client
-            ;;
-        2)
-            remove_client
-            ;;
-        3)
+        1) add_client ;;
+        2) remove_client ;;
+        3) list_clients ;;
+        4) toggle_client ;;
+        5) show_status ;;
+        6)
             echo -e "${BLUE}Showing all client configurations:${NC}"
             for CLIENT_FILE in *_wg0.conf; do
                 if [[ -f "$CLIENT_FILE" ]]; then
@@ -210,7 +274,7 @@ function show_menu() {
                 fi
             done
             ;;
-        4)
+        7)
             echo -e "${GREEN}Exiting WireGuard Management. Goodbye!${NC}"
             exit 0
             ;;
